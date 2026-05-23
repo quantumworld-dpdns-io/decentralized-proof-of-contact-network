@@ -30,7 +30,7 @@ reqwest = { version = "0.12", features = ["json"] }
 clap = { version = "4", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
-ed25519-dalek = { version = "2", features = ["serde", "rand_core"] }
+ed25519-dalek = { version = "=2.1.1", features = ["serde", "rand_core"] }
 rand = "0.8"
 hex = "0.4"
 base64 = "0.22"
