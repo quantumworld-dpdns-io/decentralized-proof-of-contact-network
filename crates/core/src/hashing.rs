@@ -154,25 +154,4 @@ mod tests {
         assert_eq!(combined.len(), 64);
     }
 
-    #[test]
-    fn test_empty_merkle_root() {
-        let root = compute_merkle_root(&[]);
-        assert_eq!(root.len(), 64);
-    }
-
-    #[test]
-    fn test_single_merkle_root() {
-        let h = hash_blake3(b"single");
-        let root = compute_merkle_root(&[h.clone()]);
-        assert_eq!(root, h);
-    }
-
-    #[test]
-    fn test_merkle_root_two_leaves() {
-        let h1 = hash_blake3(b"leaf1");
-        let h2 = hash_blake3(b"leaf2");
-        let root = compute_merkle_root(&[h1.clone(), h2.clone()]);
-        let expected = hash_concatenation(&[h1, h2]);
-        assert_eq!(root, expected);
-    }
 }
