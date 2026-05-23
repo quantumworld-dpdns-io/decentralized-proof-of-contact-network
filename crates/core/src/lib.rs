@@ -1,77 +1,31 @@
-use serde::{Deserialize, Serialize};
+pub mod error;
+pub mod types;
+pub mod node_id;
+pub mod keypair;
+pub mod orbital_window;
+pub mod contact_proof;
+pub mod hashing;
+pub mod verification;
+pub mod proof_chain;
+pub mod config;
+pub mod metrics;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoreConfig {
-    #[serde(default = "default_node_id")]
-    pub node_id: String,
-    #[serde(default = "default_data_dir")]
-    pub data_dir: String,
-    #[serde(default = "default_log_level")]
-    pub log_level: String,
-}
-
-impl Default for CoreConfig {
-    fn default() -> Self {
-        Self {
-            node_id: default_node_id(),
-            data_dir: default_data_dir(),
-            log_level: default_log_level(),
-        }
-    }
-}
-
-fn default_node_id() -> String {
-    "poi-node".to_string()
-}
-
-fn default_data_dir() -> String {
-    "./data".to_string()
-}
-
-fn default_log_level() -> String {
-    "info".to_string()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct NodeId(pub u64);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ProofId(pub uuid::Uuid);
-
-impl Default for ProofId {
-    fn default() -> Self {
-        Self(uuid::Uuid::new_v4())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContactProof {
-    pub id: ProofId,
-    pub peer_id: NodeId,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
-    pub signature: Vec<u8>,
-    pub payload: Vec<u8>,
-}
-
-impl ContactProof {
-    pub fn new(peer_id: NodeId, payload: Vec<u8>) -> Self {
-        Self {
-            id: ProofId::default(),
-            peer_id,
-            timestamp: chrono::Utc::now(),
-            signature: Vec::new(),
-            payload,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ProofStatus {
-    Pending,
-    Signed,
-    Stored,
-    Gossiped,
-    Verified,
-    Archived,
-    Failed,
-}
+pub use error::{Error, Result};
+pub use types::{
+    ContactProof, KeyPair, NodeId, OrbitalWindow, PqcSignature, ProofId, ProofMetadata, PublicKey,
+    SecretKey, Signature, WindowType,
+};
+pub use node_id::{generate_node_id, validate_node_id};
+pub use keypair::KeyPairExt;
+pub use orbital_window::{
+    daily_window, emergency_window, extended_window, hourly_window, OrbitalWindowBuilder,
+};
+pub use contact_proof::ContactProofExt;
+pub use hashing::{hash_blake3, hash_concatenation, hash_proof, hash_sha256, ProofIdExt};
+pub use proof_chain::ProofChain;
+pub use verification::{
+    verify_chain_integrity, verify_orbital_window, verify_signature, verify_timestamp,
+    FullVerificationReport, ProofVerifier,
+};
+pub use config::{CoreConfig, NetworkConfig, StorageConfig};
+pub use metrics::{ProofMetrics, ProofMetricsSnapshot};
