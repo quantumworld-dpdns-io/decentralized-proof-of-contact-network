@@ -223,9 +223,10 @@ mod tests {
 
     #[test]
     fn test_builder() {
+        let now = Utc::now();
         let window = OrbitalWindowBuilder::new()
-            .start_time(Utc::now())
-            .end_time(Utc::now() + Duration::hours(4))
+            .start_time(now)
+            .end_time(now + Duration::hours(4))
             .window_type(WindowType::Extended)
             .build();
         assert_eq!(window.window_type, WindowType::Extended);
