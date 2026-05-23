@@ -3,9 +3,8 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rand::seq::SliceRandom;
-use rand::Rng;
 use tokio::sync::Mutex;
-use tracing::{debug, trace, warn};
+use tracing::debug;
 
 use crate::error::NetworkError;
 use crate::message::{NetworkMessage, PeerEntry, PeerId, ProofOfContact};
