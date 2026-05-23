@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
-use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::HeaderMap;
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -67,24 +66,6 @@ pub async fn auth_middleware(
         }
         (Some(_), _) => Err(ApiError::Unauthorized("Invalid API key".into())),
         (None, _) => Ok(next.run(req).await),
-    }
-}
-
-pub fn require_role(role: &str) -> impl Fn(Request, Next) -> Result<Response, ApiError> + Clone {
-    let role = role.to_string();
-    move |req: Request, next: Next| {
-        let role = role.clone();
-        async move {
-            if let Some(user) = req.extensions().get::<AuthenticatedUser>() {
-                if user.roles.contains(&role) {
-                    return Ok(next.run(req).await);
-                }
-            }
-            Err(ApiError::Unauthorized(format!(
-                "Role '{}' required",
-                role
-            )))
-        }
     }
 }
 

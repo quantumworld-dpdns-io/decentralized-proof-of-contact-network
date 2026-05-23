@@ -1,12 +1,8 @@
 use axum::extract::{Path, Query, State};
 use axum::response::Json;
-use chrono::Utc;
 use poi_core::contact_proof::ContactProofExt;
-use poi_core::hashing::ProofIdExt;
 use poi_core::keypair::KeyPairExt;
-use poi_core::types::{
-    ContactProof, KeyPair, NodeId, OrbitalWindow, ProofId, ProofMetadata, WindowType,
-};
+use poi_core::types::{ContactProof, KeyPair, NodeId, ProofId, ProofMetadata};
 use serde::Deserialize;
 use uuid::Uuid;
 

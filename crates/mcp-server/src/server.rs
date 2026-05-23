@@ -350,7 +350,7 @@ impl McpServer {
 }
 
 async fn handle_mcp_request(
-    Extension(api_client): Extension<Arc<ApiClient>>,
+    Extension(config): Extension<Arc<McpConfig>>,
     Json(body): Json<Value>,
 ) -> Json<Value> {
     let jsonrpc = body
@@ -373,8 +373,7 @@ async fn handle_mcp_request(
         params,
     };
 
-    let config = McpConfig::default();
-    let server = McpServer::new(config);
+    let server = McpServer::new((*config).clone());
 
     match server.handle_request(request).await {
         Ok(response) => Json(serde_json::to_value(&response).unwrap_or_default()),

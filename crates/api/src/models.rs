@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use chrono::{DateTime, Utc};
-use poi_core::types::{ContactProof, NodeId, OrbitalWindow, ProofId, VerificationStatus};
+use poi_core::types::{ContactProof, NodeId, OrbitalWindow, ProofId};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;

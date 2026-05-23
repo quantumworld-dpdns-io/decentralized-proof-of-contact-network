@@ -45,14 +45,6 @@ impl ApiClient {
             .context("failed to send POST request")
     }
 
-    async fn delete_raw(&self, path: &str) -> Result<reqwest::Response> {
-        self.client
-            .delete(&self.url(path))
-            .send()
-            .await
-            .context("failed to send DELETE request")
-    }
-
     async fn parse_value(&self, resp: reqwest::Response) -> Result<Value> {
         let status = resp.status();
         let body = resp.text().await.context("failed to read response body")?;
@@ -74,14 +66,6 @@ impl ApiClient {
 
     async fn post(&self, path: &str, body: &Value) -> Result<Value> {
         self.parse_value(self.post_raw(path, body).await?).await
-    }
-
-    async fn delete(&self, path: &str) -> Result<Value> {
-        self.parse_value(self.delete_raw(path).await?).await
-    }
-
-    fn extract<T: DeserializeOwned>(&self, val: Value) -> Result<T> {
-        serde_json::from_value(val).context("failed to deserialize API response")
     }
 
     // ---- Proof endpoints ----

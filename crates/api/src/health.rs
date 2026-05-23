@@ -1,12 +1,8 @@
-use std::time::Instant;
-
 use axum::extract::State;
 use axum::response::Json;
 use prometheus::TextEncoder;
 use serde_json::json;
 use utoipa::ToSchema;
-
-use crate::error::ApiResult;
 use crate::models::AppState;
 
 #[derive(Debug, serde::Serialize, ToSchema)]

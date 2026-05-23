@@ -17,15 +17,25 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(subcommand)]
     Proof(proof::ProofCommands),
+    #[command(subcommand)]
     Node(node::NodeCommands),
+    #[command(subcommand)]
     Peer(peer::PeerCommands),
+    #[command(subcommand)]
     Window(window::WindowCommands),
+    #[command(subcommand)]
     Config(config::ConfigCommands),
+    #[command(subcommand)]
     Key(key::KeyCommands),
+    #[command(subcommand)]
     Analytics(analytics::AnalyticsCommands),
+    #[command(subcommand)]
     Ai(ai::AiCommands),
+    #[command(subcommand)]
     Export(export::ExportCommands),
+    #[command(subcommand)]
     Import(import::ImportCommands),
 }
 
