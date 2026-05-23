@@ -22,7 +22,6 @@ pub use orbital_window::{
 };
 pub use contact_proof::ContactProofExt;
 pub use hashing::{hash_blake3, hash_concatenation, hash_proof, hash_sha256, ProofIdExt};
-pub use proof_chain::ProofChain;
 pub use verification::{
     verify_chain_integrity, verify_orbital_window, verify_signature, verify_timestamp,
     FullVerificationReport, ProofVerifier,
