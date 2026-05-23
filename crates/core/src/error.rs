@@ -39,20 +39,14 @@ pub enum Error {
     PqcError(String),
 }
 
-impl From<serde_yaml::Error> for Error {
-    fn from(e: serde_yaml::Error) -> Self {
-        Error::SerializationError(e.to_string())
-    }
-}
-
-impl From<serde_yaml::Error> for Error {
-    fn from(e: serde_yaml::Error) -> Self {
-        Error::SerializationError(e.to_string())
-    }
-}
-
 impl From<serde_json::Error> for Error {
     fn from(e: serde_json::Error) -> Self {
+        Error::SerializationError(e.to_string())
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(e: serde_yaml::Error) -> Self {
         Error::SerializationError(e.to_string())
     }
 }
@@ -60,12 +54,6 @@ impl From<serde_json::Error> for Error {
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::StorageError(e.to_string())
-    }
-}
-
-impl From<serde_yaml::Error> for Error {
-    fn from(e: serde_yaml::Error) -> Self {
-        Error::SerializationError(e.to_string())
     }
 }
 

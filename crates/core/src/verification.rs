@@ -3,8 +3,7 @@ use std::time::Duration;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::Utc;
-use ed25519_dalek::{Signature as DalekSignature, VerifyingKey};
-use ed25519_dalek::Verifier;
+use ed25519_dalek::{Signature as DalekSignature, Verifier, VerifyingKey};
 
 use crate::contact_proof::ContactProofExt;
 use crate::error::{Error, Result};
