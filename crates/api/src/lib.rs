@@ -24,7 +24,6 @@ use tokio::net::TcpListener;
 use tracing::{error, info};
 
 use crate::auth::AuthConfig;
-use crate::models::AppStateInner;
 
 pub async fn start_server(api_config: ApiConfig, auth_config: AuthConfig) -> anyhow::Result<()> {
     let state = Arc::new(AppStateInner::new(api_config.clone(), auth_config));

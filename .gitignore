@@ -30,3 +30,4 @@ target/debug/deps
 ./target/debug/deps
 target/debug//deps
 deps/
+/target/debug
