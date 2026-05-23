@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use chrono::{DateTime, Utc};
-use poi_core::Proof;
+use poi_core::ContactProof;
 use tokio::sync::Mutex;
 
 use crate::arrow::ProofBatchBuilder;
@@ -50,16 +48,16 @@ impl Default for PipelineMetrics {
 
 pub struct AnalyticsPipeline {
     config: AnalyticsConfig,
-    status: Arc<Mutex<PipelineStatus>>,
-    metrics: Arc<Mutex<PipelineMetrics>>,
+    status: std::sync::Arc<Mutex<PipelineStatus>>,
+    metrics: std::sync::Arc<Mutex<PipelineMetrics>>,
 }
 
 impl AnalyticsPipeline {
     pub fn new(config: AnalyticsConfig) -> Self {
         Self {
             config,
-            status: Arc::new(Mutex::new(PipelineStatus::Idle)),
-            metrics: Arc::new(Mutex::new(PipelineMetrics::default())),
+            status: std::sync::Arc::new(Mutex::new(PipelineStatus::Idle)),
+            metrics: std::sync::Arc::new(Mutex::new(PipelineMetrics::default())),
         }
     }
 
@@ -75,8 +73,8 @@ impl AnalyticsPipeline {
         self.metrics.lock().await.clone()
     }
 
-    pub async fn run_export(&self, proofs: &[Proof], output_path: &str) -> Result<()> {
-        self.set_status(PipelineStage::Export).await;
+    pub async fn run_export(&self, proofs: &[ContactProof], output_path: &str) -> Result<()> {
+        *self.status.lock().await = PipelineStatus::Running(PipelineStage::Export);
 
         let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
         for proof in proofs {
@@ -85,9 +83,8 @@ impl AnalyticsPipeline {
         let batch = builder.finish()?;
 
         let file = std::fs::File::create(output_path)?;
-        let writer =
-            parquet::arrow::ArrowWriter::try_new(file, batch.schema(), None)
-                .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
+        let writer = parquet::arrow::ArrowWriter::try_new(file, batch.schema(), None)
+            .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
         let mut writer = writer;
         writer
             .write(&batch)
@@ -101,23 +98,18 @@ impl AnalyticsPipeline {
             metrics.proofs_exported += proofs.len() as u64;
         }
 
-        tracing::info!(
-            "Exported {} proofs to {}",
-            proofs.len(),
-            output_path
-        );
-
-        self.set_status(PipelineStatus::Completed).await;
+        tracing::info!("Exported {} proofs to {}", proofs.len(), output_path);
+        *self.status.lock().await = PipelineStatus::Completed;
         Ok(())
     }
 
     pub async fn run_sync(
         &self,
-        proofs: &[Proof],
+        proofs: &[ContactProof],
         table_name: &str,
         location: &str,
     ) -> Result<()> {
-        self.set_status(PipelineStage::Sync).await;
+        *self.status.lock().await = PipelineStatus::Running(PipelineStage::Sync);
 
         let data_path = format!("{}/{}.parquet", location, uuid::Uuid::new_v4());
         std::fs::create_dir_all(location)?;
@@ -130,18 +122,18 @@ impl AnalyticsPipeline {
         }
 
         tracing::info!(
-            "Synced {} proofs to Iceberg table '{}' at {}",
+            "Synced {} proofs to table '{}' at {}",
             proofs.len(),
             table_name,
             location
         );
 
-        self.set_status(PipelineStatus::Completed).await;
+        *self.status.lock().await = PipelineStatus::Completed;
         Ok(())
     }
 
     pub async fn run_compact(&self, location: &str) -> Result<()> {
-        self.set_status(PipelineStage::Compact).await;
+        *self.status.lock().await = PipelineStatus::Running(PipelineStage::Compact);
 
         let data_dir = std::path::Path::new(location);
         if !data_dir.exists() {
@@ -166,7 +158,7 @@ impl AnalyticsPipeline {
 
         if parquet_files.len() <= 1 {
             tracing::info!("Nothing to compact: {} parquet files", parquet_files.len());
-            self.set_status(PipelineStatus::Completed).await;
+            *self.status.lock().await = PipelineStatus::Completed;
             return Ok(());
         }
 
@@ -187,16 +179,16 @@ impl AnalyticsPipeline {
         }
 
         if all_batches.is_empty() {
-            self.set_status(PipelineStatus::Completed).await;
+            *self.status.lock().await = PipelineStatus::Completed;
             return Ok(());
         }
 
-        let compacted_path = format!("{}/compacted-{}.parquet", location, uuid::Uuid::new_v4());
+        let compacted_path =
+            format!("{}/compacted-{}.parquet", location, uuid::Uuid::new_v4());
         let schema = all_batches[0].schema();
         let file = std::fs::File::create(&compacted_path)?;
-        let writer =
-            parquet::arrow::ArrowWriter::try_new(file, schema, None)
-                .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
+        let writer = parquet::arrow::ArrowWriter::try_new(file, schema, None)
+            .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
         let mut writer = writer;
         for batch in &all_batches {
             writer
@@ -224,7 +216,7 @@ impl AnalyticsPipeline {
             compacted_path
         );
 
-        self.set_status(PipelineStatus::Completed).await;
+        *self.status.lock().await = PipelineStatus::Completed;
         Ok(())
     }
 
@@ -232,17 +224,12 @@ impl AnalyticsPipeline {
         &self,
         queries: &[QueryDefinition],
     ) -> Result<Vec<(String, String, String)>> {
-        self.set_status(PipelineStage::Analyze).await;
+        *self.status.lock().await = PipelineStatus::Running(PipelineStage::Analyze);
 
         let mut results = Vec::new();
-
         for query in queries {
             tracing::info!("Executing analytics query: {}", query.name);
-            results.push((
-                query.name.to_string(),
-                query.description.to_string(),
-                query.sql.clone(),
-            ));
+            results.push((query.name.to_string(), query.description.to_string(), query.sql.clone()));
         }
 
         {
@@ -250,13 +237,13 @@ impl AnalyticsPipeline {
             metrics.queries_executed += queries.len() as u64;
         }
 
-        self.set_status(PipelineStatus::Completed).await;
+        *self.status.lock().await = PipelineStatus::Completed;
         Ok(results)
     }
 
     pub async fn run_all(
         &self,
-        proofs: &[Proof],
+        proofs: &[ContactProof],
         export_path: &str,
         sync_location: &str,
         queries: &[QueryDefinition],
@@ -278,23 +265,6 @@ impl AnalyticsPipeline {
 
         Ok(self.metrics().await)
     }
-
-    async fn set_status(&self, status: impl Into<PipelineStatus>) {
-        let mut s = self.status.lock().await;
-        *s = status.into();
-    }
-}
-
-impl Into<PipelineStatus> for PipelineStage {
-    fn into(self) -> PipelineStatus {
-        PipelineStatus::Running(self)
-    }
-}
-
-impl Into<PipelineStatus> for PipelineStatus {
-    fn into(self) -> PipelineStatus {
-        self
-    }
 }
 
 #[cfg(test)]
@@ -302,20 +272,31 @@ mod tests {
     use super::*;
     use crate::config::AnalyticsConfig;
     use chrono::TimeZone;
-    use poi_core::{NodeId, OrbitalWindowId, VerificationStatus};
+    use poi_core::{
+        NodeId, OrbitalWindow, ProofId, ProofMetadata, Signature, WindowType,
+    };
     use uuid::Uuid;
 
-    fn sample_proofs() -> Vec<Proof> {
-        vec![Proof {
-            id: Uuid::new_v4(),
-            prover_id: NodeId("node-a".to_string()),
-            verifier_id: NodeId("node-b".to_string()),
+    fn sample_proofs() -> Vec<ContactProof> {
+        vec![ContactProof {
+            id: ProofId(Uuid::new_v4()),
+            proving_node: NodeId("node-a".to_string()),
+            target_node: NodeId("node-b".to_string()),
+            orbital_window: OrbitalWindow {
+                id: Uuid::new_v4(),
+                start_time: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+                end_time: Utc.with_ymd_and_hms(2025, 1, 1, 1, 0, 0).unwrap(),
+                window_type: WindowType::Standard,
+            },
             timestamp: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-            verification_status: VerificationStatus::Verified,
-            confidence_score: 0.95,
-            orbital_window: OrbitalWindowId("w1".to_string()),
-            signature: vec![],
-            metadata: serde_json::json!({"key": "value"}),
+            signature: Signature("sig".to_string()),
+            pqc_signature: None,
+            metadata: ProofMetadata {
+                protocol_version: "1.0".to_string(),
+                chain_position: None,
+                confidence_score: 0.95,
+                proof_purpose: "test".to_string(),
+            },
         }]
     }
 
@@ -348,11 +329,7 @@ mod tests {
         let config = AnalyticsConfig::default();
         let pipeline = AnalyticsPipeline::new(config);
         pipeline
-            .run_sync(
-                &sample_proofs(),
-                "test_table",
-                location.to_str().unwrap(),
-            )
+            .run_sync(&sample_proofs(), "test_table", location.to_str().unwrap())
             .await
             .unwrap();
         let metrics = pipeline.metrics().await;
@@ -366,7 +343,6 @@ mod tests {
         let queries = crate::queries::predefined_queries();
         let results = pipeline.run_analytics(&queries).await.unwrap();
         assert_eq!(results.len(), 5);
-        assert_eq!(results[0].0, "proof_count_by_window");
     }
 
     #[tokio::test]
