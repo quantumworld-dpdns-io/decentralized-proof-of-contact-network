@@ -1,13 +1,14 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use ed25519_dalek::{Signature as DalekSignature, VerifyingKey};
+use ed25519_dalek::Verifier;
 
 use crate::error::{Error, Result};
-use crate::hashing::{hash_blake3, ProofIdExt};
+use crate::keypair::KeyPairExt;
 use crate::types::{
-    ContactProof, KeyPair, NodeId, OrbitalWindow, PqcSignature, ProofId, ProofMetadata, PublicKey,
-    Signature, WindowType,
+    ContactProof, KeyPair, NodeId, OrbitalWindow, ProofId, ProofMetadata, PublicKey,
+    Signature,
 };
 
 pub trait ContactProofExt {

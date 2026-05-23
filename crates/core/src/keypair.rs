@@ -168,8 +168,6 @@ impl KeyPairExt for KeyPair {
     }
 }
 
-use ed25519_dalek::Signature as DalekSignature;
-
 #[cfg(test)]
 mod tests {
     use super::*;
