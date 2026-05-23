@@ -1,0 +1,27 @@
+apiVersion: v2
+name: poi-network
+description: Decentralized Proof-of-Contact Network - A peer-to-peer proof-of-contact platform with AI-powered vector search, real-time analytics, and MCP-based AI agent integration
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">= 1.28.0-0"
+home: https://github.com/quantumworld-dpdns-io/decentralized-proof-of-contact-network
+icon: https://poi.network/icon.png
+keywords:
+  - proof-of-contact
+  - decentralized
+  - p2p
+  - ai
+  - vector-search
+  - mcp
+sources:
+  - https://github.com/quantumworld-dpdns-io/decentralized-proof-of-contact-network
+maintainers:
+  - name: POI Network Team
+    email: team@poi.network
+    url: https://poi.network
+annotations:
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Helm chart for POI Network
+  artifacthub.io/containsSecurityUpdates: "false"
