@@ -330,7 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_state_sync_basic() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let sync = StateSync::new(node_id, 10);
 
         let proof = make_proof(uuid::Uuid::new_v4());
@@ -344,14 +344,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_request_response() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let sync = StateSync::new(node_id, 10);
 
         let proof = make_proof(uuid::Uuid::new_v4());
         sync.add_local_proof(proof.clone()).await;
 
         let req = NetworkMessage::SyncRequest {
-            node_id: PeerId::new(),
+            node_id: Uuid::new_v4(),
             last_sync: 0,
             known_proofs: Vec::new(),
             timestamp: 12345,
@@ -369,13 +369,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_response_handling() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let sync = StateSync::new(node_id, 10);
         assert_eq!(sync.get_local_proof_count().await, 0);
 
         let proof = make_proof(uuid::Uuid::new_v4());
         let resp = NetworkMessage::SyncResponse {
-            node_id: PeerId::new(),
+            node_id: Uuid::new_v4(),
             proofs: vec![proof.clone()],
             more_available: false,
             batch_seq: 0,
@@ -389,14 +389,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_dedup() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let sync = StateSync::new(node_id, 10);
 
         let proof = make_proof(uuid::Uuid::new_v4());
         sync.add_local_proof(proof.clone()).await;
 
         let resp = NetworkMessage::SyncResponse {
-            node_id: PeerId::new(),
+            node_id: Uuid::new_v4(),
             proofs: vec![proof.clone()],
             more_available: false,
             batch_seq: 0,

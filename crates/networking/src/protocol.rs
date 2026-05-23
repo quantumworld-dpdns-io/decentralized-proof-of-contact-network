@@ -406,7 +406,7 @@ mod tests {
     async fn test_handshake_handler() {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let store = Arc::new(InMemoryPeerStore::new());
         let handler = HandshakeHandler::new(
             node_id,
@@ -417,7 +417,7 @@ mod tests {
 
         let mut csprng = OsRng;
         let remote_key = SigningKey::generate(&mut csprng);
-        let remote_id = PeerId::new();
+        let remote_id = Uuid::new_v4();
         let addr: SocketAddr = "127.0.0.1:9876".parse().unwrap();
         let payload = HandshakePayload::new(
             &remote_key,
@@ -444,7 +444,7 @@ mod tests {
     async fn test_proof_submission() {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let handler = ProofSubmissionHandler::new(node_id, signing_key);
 
         let proof = ProofOfContact::new(
@@ -456,7 +456,7 @@ mod tests {
         let msg = NetworkMessage::ProofSubmission { proof: proof.clone() };
 
         handler
-            .handle_message(&msg, PeerId::new())
+            .handle_message(&msg, Uuid::new_v4())
             .await
             .unwrap();
         assert_eq!(handler.proof_count().await, 1);
@@ -479,12 +479,12 @@ mod tests {
         let handler = ProofRequestHandler::new(local_proofs);
         let msg = NetworkMessage::ProofRequest {
             proof_id: proof.id,
-            requestor: PeerId::new(),
+            requestor: Uuid::new_v4(),
             timestamp: 12345,
         };
 
         let resp = handler
-            .handle_message(&msg, PeerId::new())
+            .handle_message(&msg, Uuid::new_v4())
             .await
             .unwrap();
         assert!(resp.is_some());
@@ -500,7 +500,7 @@ mod tests {
     async fn test_composite_handler() {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let store = Arc::new(InMemoryPeerStore::new());
 
         let handshake = Box::new(HandshakeHandler::new(

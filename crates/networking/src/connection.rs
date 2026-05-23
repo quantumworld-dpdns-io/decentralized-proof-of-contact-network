@@ -78,7 +78,7 @@ impl ConnectionManager {
         let remote_addr = conn.remote_addr()?;
 
         // For now, generate a temporary peer ID
-        let peer_id = PeerId::new();
+        let peer_id = Uuid::new_v4();
 
         let pooled = PooledConnection {
             peer_id,
@@ -239,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_connection_manager_basic() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
         let transport = Arc::new(crate::transport::TcpTransport::new(addr));
         let manager = ConnectionManager::new(node_id, transport, 50, Duration::from_secs(15));
@@ -251,7 +251,7 @@ mod tests {
     #[tokio::test]
     async fn test_connection_pooled_struct() {
         let conn = PooledConnection {
-            peer_id: PeerId::new(),
+            peer_id: Uuid::new_v4(),
             address: "127.0.0.1:9876".parse().unwrap(),
             state: ConnectionState::Connected,
             connected_at: Some(12345),

@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn test_message_roundtrip() {
         let msg = NetworkMessage::Heartbeat {
-            node_id: PeerId::new(),
+            node_id: Uuid::new_v4(),
             timestamp: 12345,
             load: 42,
         };
@@ -362,7 +362,7 @@ mod tests {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
-        let sender = PeerId::new();
+        let sender = Uuid::new_v4();
         let msg = NetworkMessage::Heartbeat {
             node_id: sender,
             timestamp: 12345,
@@ -378,7 +378,7 @@ mod tests {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
-        let sender = PeerId::new();
+        let sender = Uuid::new_v4();
         let msg = NetworkMessage::Heartbeat {
             node_id: sender,
             timestamp: 12345,
@@ -408,7 +408,7 @@ mod tests {
     fn test_handshake_verify() {
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let addr: SocketAddr = "127.0.0.1:9876".parse().unwrap();
         let payload = HandshakePayload::new(
             &signing_key,

@@ -224,7 +224,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_gossip_creation() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let store = Arc::new(InMemoryPeerStore::new());
         let gossip = GossipProtocol::new(node_id, 3, 5, store);
         assert_eq!(gossip.pending_count().await, 0);
@@ -232,12 +232,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_gossip_relay_ttl() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let store = Arc::new(InMemoryPeerStore::new());
         let gossip = GossipProtocol::new(node_id, 3, 5, store);
 
         let msg = GossipMessage {
-            origin: PeerId::new(),
+            origin: Uuid::new_v4(),
             message_type: "proof".into(),
             payload: vec![1, 2, 3],
             ttl: 2,
@@ -245,19 +245,19 @@ mod tests {
             message_id: [1u8; 32],
         };
 
-        let relay = gossip.receive_gossip(&msg, PeerId::new()).await.unwrap();
+        let relay = gossip.receive_gossip(&msg, Uuid::new_v4()).await.unwrap();
         assert!(relay.is_some());
         assert_eq!(relay.unwrap().ttl, 1);
     }
 
     #[tokio::test]
     async fn test_gossip_dedup() {
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
         let store = Arc::new(InMemoryPeerStore::new());
         let gossip = GossipProtocol::new(node_id, 3, 5, store);
 
         let msg = GossipMessage {
-            origin: PeerId::new(),
+            origin: Uuid::new_v4(),
             message_type: "proof".into(),
             payload: vec![1, 2, 3],
             ttl: 2,
@@ -265,9 +265,9 @@ mod tests {
             message_id: [2u8; 32],
         };
 
-        let first = gossip.receive_gossip(&msg, PeerId::new()).await.unwrap();
+        let first = gossip.receive_gossip(&msg, Uuid::new_v4()).await.unwrap();
         assert!(first.is_some());
-        let second = gossip.receive_gossip(&msg, PeerId::new()).await.unwrap();
+        let second = gossip.receive_gossip(&msg, Uuid::new_v4()).await.unwrap();
         assert!(second.is_none());
     }
 }

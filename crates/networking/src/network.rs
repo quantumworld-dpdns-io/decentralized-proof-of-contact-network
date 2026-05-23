@@ -69,7 +69,7 @@ impl NetworkManager {
         let mut csprng = rand::rngs::OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
-        let node_id = PeerId::new();
+        let node_id = Uuid::new_v4();
 
         let transport: Arc<dyn Transport> = {
             #[cfg(feature = "tls")]
@@ -432,7 +432,7 @@ impl NetworkManager {
             }
         };
 
-        let sender_peer_id = PeerId::new(); // Simplified; would extract from envelope
+        let sender_peer_id = Uuid::new_v4(); // Simplified; would extract from envelope
 
         if let Err(e) = rate_limiter.check_message(sender_peer_id).await {
             warn!("Rate limit exceeded for peer {}", sender_peer_id);

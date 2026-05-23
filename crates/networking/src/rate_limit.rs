@@ -122,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_rate_limiter_global() {
         let limiter = RateLimiter::new(5, 10, 5, 10);
-        let peer = PeerId::new();
+        let peer = Uuid::new_v4();
         for _ in 0..5 {
             assert!(limiter.check_message(peer).await.is_ok());
         }

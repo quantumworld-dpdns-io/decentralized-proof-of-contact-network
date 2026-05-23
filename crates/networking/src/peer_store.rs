@@ -310,7 +310,7 @@ mod tests {
     #[tokio::test]
     async fn test_in_memory_store() {
         let store = InMemoryPeerStore::new();
-        let peer = make_peer(PeerId::new());
+        let peer = make_peer(Uuid::new_v4());
         assert!(!store.contains(peer.id).await);
         store.add_peer(peer.clone()).await.unwrap();
         assert!(store.contains(peer.id).await);
@@ -336,7 +336,7 @@ mod tests {
         let path = dir.path().join("peers.bin");
         let store = PersistentPeerStore::new(path.clone());
         store.initialize().await.unwrap();
-        let peer = make_peer(PeerId::new());
+        let peer = make_peer(Uuid::new_v4());
         store.add_peer(peer.clone()).await.unwrap();
         assert!(store.contains(peer.id).await);
         store.flush().await.unwrap();
