@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+pub type Result<T> = std::result::Result<T, NetworkError>;
+
 #[derive(Error, Debug, Clone)]
 pub enum NetworkError {
     #[error("Connection failed: {0}")]
