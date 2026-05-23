@@ -197,7 +197,11 @@ impl Transport for TcpTransport {
     }
 
     fn local_addr(&self) -> Result<SocketAddr, NetworkError> {
-        Ok(self.listen_addr)
+        let actual = self.actual_addr.blocking_lock();
+        match *actual {
+            Some(addr) => Ok(addr),
+            None => Ok(self.listen_addr),
+        }
     }
 }
 
