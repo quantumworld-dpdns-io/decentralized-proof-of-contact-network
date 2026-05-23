@@ -119,8 +119,11 @@ impl ProofTableFunction {
         proofs: Vec<Proof>,
     ) -> Result<Arc<datafusion::catalog::TableProvider>> {
         let schema = proof_schema();
-        let batch = ProofBatchBuilder::with_capacity(proofs.len())
-            .finish_and_write_parquet_inline(&proofs)?;
+        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
+        for proof in &proofs {
+            builder.add_proof(proof);
+        }
+        let batch = builder.finish()?;
 
         let provider = datafusion::datasource::memory::MemTable::try_new(schema, vec![vec![batch]])
             .map_err(|e| crate::AnalyticsError::DataFusion(e.to_string()))?;
