@@ -281,11 +281,12 @@ pub mod tls {
             let server_name = ServerName::try_from("localhost")
                 .map_err(|_| NetworkError::TlsError("invalid DNS name".into()))?;
 
-            let tls_stream = connector
+            let client_stream = connector
                 .connect(server_name, stream)
                 .await
                 .map_err(|e| NetworkError::TlsError(e.to_string()))?;
 
+            let tls_stream = tokio_rustls::TlsStream::Client(client_stream);
             debug!("TLS connected to {}", addr);
             Ok(Box::new(TlsConnection::new(tls_stream, addr)))
         }
