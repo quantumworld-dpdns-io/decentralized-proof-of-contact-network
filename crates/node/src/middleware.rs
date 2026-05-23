@@ -149,7 +149,7 @@ mod tests {
         let next = |req: Request<Body>| async move {
             Ok::<_, Infallible>(Response::new(req.into_body()))
         };
-        let wrapped = axum::middleware::from_fn::<_, _, _, _>(auth_middleware);
+        let wrapped = axum::middleware::from_fn::<_, _, _>(auth_middleware);
         let _ = wrapped;
     }
 
@@ -161,7 +161,7 @@ mod tests {
         let next = |req: Request<Body>| async move {
             Ok::<_, Infallible>(Response::new(req.into_body()))
         };
-        let wrapped = axum::middleware::from_fn::<_, _, _, _>(auth_middleware);
+        let wrapped = axum::middleware::from_fn::<_, _, _>(auth_middleware);
         let _ = wrapped;
     }
 
