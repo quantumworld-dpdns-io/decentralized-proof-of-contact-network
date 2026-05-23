@@ -36,10 +36,13 @@ impl DatafusionEngine {
         name: &str,
         proofs: &[Proof],
     ) -> Result<()> {
-        let batch = ProofBatchBuilder::with_capacity(proofs.len())
-            .finish_and_write_parquet_inline(proofs)?;
+        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
+        for proof in proofs {
+            builder.add_proof(proof);
+        }
+        let batch = builder.finish()?;
         self.ctx
-            .register_batch(name, batch)
+            .register_batch(name, vec![batch])
             .await
             .map_err(|e| crate::AnalyticsError::DataFusion(e.to_string()))?;
         Ok(())
