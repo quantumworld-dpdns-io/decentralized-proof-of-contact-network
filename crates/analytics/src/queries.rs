@@ -61,7 +61,7 @@ GROUP BY window_id",
     )
 }
 
-pub fn query_peer_reputation_trends(peer_id: &PeerId) -> String {
+pub fn query_peer_reputation_trends(peer_id: &NodeId) -> String {
     format!(
         "SELECT
     '{}' AS peer_id,
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_query_peer_reputation_trends() {
-        let peer = PeerId("peer-1".to_string());
+        let peer = NodeId("peer-1".to_string());
         let sql = query_peer_reputation_trends(&peer);
         assert!(sql.contains("peer-1"));
     }
