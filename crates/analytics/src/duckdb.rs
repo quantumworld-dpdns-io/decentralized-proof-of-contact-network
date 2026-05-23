@@ -129,8 +129,11 @@ impl DuckDbEngine {
             table_name
         ))?;
 
-        let batch = ProofBatchBuilder::with_capacity(proofs.len())
-            .finish_and_write_parquet_inline(proofs)?;
+        let mut pbb = ProofBatchBuilder::with_capacity(proofs.len());
+        for p in proofs {
+            pbb.add_proof(p);
+        }
+        let batch = pbb.finish()?;
 
         let appender = self
             .conn
