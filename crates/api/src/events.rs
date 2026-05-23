@@ -1,10 +1,11 @@
 use std::convert::Infallible;
 
+use axum::body::Body;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
-use axum::response::IntoResponse;
-use axum_extra::sse::{Event, KeepAlive, Sse};
-use futures::stream::{self, Stream};
+use axum::http::{header, StatusCode};
+use axum::response::{IntoResponse, Response};
+use futures::stream::{self, Stream, StreamExt};
 use poi_core::types::{ContactProof, NodeId, OrbitalWindow, ProofId, VerificationStatus};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -60,9 +61,7 @@ async fn handle_ws_socket(mut socket: WebSocket, state: AppState) {
     }
 }
 
-pub async fn handle_sse(
-    State(state): State<AppState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn handle_sse(state: AppState) -> Response {
     let rx = state.event_tx.subscribe();
     let stream = stream::unfold(rx, |mut rx| async move {
         loop {
@@ -72,24 +71,61 @@ pub async fn handle_sse(
                         Ok(d) => d,
                         Err(_) => continue,
                     };
-                    return Some((Ok(Event::default().data(data)), rx));
+                    let msg = format!("data: {}\n\n", data);
+                    return Some((Ok::<_, Infallible>(axum::body::Bytes::from(msg)), rx));
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => return None,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
             }
         }
     });
-    Sse::new(stream).keep_alive(KeepAlive::default())
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, "text/event-stream")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .header(header::CONNECTION, "keep-alive")
+        .body(Body::from_stream(stream))
+        .unwrap()
 }
 
 pub async fn handle_events(
     ws: Option<WebSocketUpgrade>,
     State(state): State<AppState>,
-) -> ApiResult<axum::response::Response> {
-    if let Some(ws) = ws {
-        Ok(ws.on_upgrade(move |socket| handle_ws_socket(socket, state)))
-    } else {
-        let sse = handle_sse(State(state)).await;
-        Ok(sse.into_response())
+) -> ApiResult<Response> {
+    match ws {
+        Some(ws) => Ok(ws.on_upgrade(move |socket| handle_ws_socket(socket, state))),
+        None => {
+            let sse = handle_sse(state).await;
+            Ok(sse)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use poi_core::types::{NodeId, OrbitalWindow, WindowType};
+    use chrono::{Duration, Utc};
+
+    #[test]
+    fn test_app_event_serialization() {
+        let event = AppEvent::WindowOpened(
+            OrbitalWindow::new(Utc::now(), Utc::now() + Duration::hours(1), WindowType::Standard)
+        );
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("WindowOpened"));
+    }
+
+    #[test]
+    fn test_app_event_peer_connected() {
+        let peer = PeerInfo {
+            id: NodeId::new(),
+            address: "127.0.0.1:9000".into(),
+            connected_at: Utc::now(),
+            latency_ms: 10,
+        };
+        let event = AppEvent::PeerConnected(peer);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("PeerConnected"));
     }
 }

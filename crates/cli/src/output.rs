@@ -1,7 +1,6 @@
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
-use std::io::Write;
 
 pub enum OutputFormat {
     Json,

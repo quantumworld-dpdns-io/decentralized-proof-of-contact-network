@@ -265,7 +265,7 @@ impl McpServer {
     }
 
     fn build_router(&self) -> Router {
-        let state = Arc::new(ApiClient::new(&self.config));
+        let state = Arc::new(self.config.clone());
 
         Router::new()
             .route("/mcp", post(handle_mcp_request))

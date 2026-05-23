@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Subcommand;
-use serde_json::Value;
 
 use crate::client::ApiClient;
 use crate::output;
