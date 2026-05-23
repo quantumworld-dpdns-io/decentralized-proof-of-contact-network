@@ -481,20 +481,39 @@ fn generate_self_signed_cert() -> Result<(Vec<rustls::pki_types::CertificateDer<
 #[cfg(test)]
 mod tests {
     use super::*;
-use uuid::Uuid;
+    use std::net::SocketAddr;
+    use uuid::Uuid;
 
-use crate::config::NetworkConfig;
+    use crate::config::NetworkConfig;
+
+    fn test_config(port: u16) -> NetworkConfig {
+        NetworkConfig {
+            listen_addr: SocketAddr::from(([127, 0, 0, 1], port)),
+            external_addr: SocketAddr::from(([127, 0, 0, 1], port)),
+            bootstrap_peers: Vec::new(),
+            max_peers: 10,
+            handshake_timeout: Duration::from_secs(2),
+            message_timeout: Duration::from_secs(5),
+            heartbeat_interval: Duration::from_secs(30),
+            rate_limit_messages_per_sec: 1000,
+            enable_tls: false,
+            enable_quic: false,
+            gossip_fanout: 2,
+            gossip_ttl: 3,
+            sync_batch_size: 10,
+        }
+    }
 
     #[tokio::test]
     async fn test_network_manager_create() {
-        let config = NetworkConfig::default();
+        let config = test_config(18901);
         let manager = NetworkManager::new(config).await.unwrap();
         assert!(!manager.node_id.is_nil());
     }
 
     #[tokio::test]
     async fn test_network_manager_events() {
-        let config = NetworkConfig::default();
+        let config = test_config(18902);
         let manager = NetworkManager::new(config).await.unwrap();
         let mut rx = manager.subscribe();
 
@@ -505,7 +524,7 @@ use crate::config::NetworkConfig;
 
     #[tokio::test]
     async fn test_network_manager_start_stop() {
-        let config = NetworkConfig::default();
+        let config = test_config(18903);
         let manager = NetworkManager::new(config).await.unwrap();
         manager.start().await.unwrap();
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -514,7 +533,7 @@ use crate::config::NetworkConfig;
 
     #[tokio::test]
     async fn test_network_manager_broadcast() {
-        let config = NetworkConfig::default();
+        let config = test_config(18904);
         let manager = NetworkManager::new(config).await.unwrap();
         manager.start().await.unwrap();
 
