@@ -2,15 +2,7 @@
 resolver = "2"
 members = [
     "crates/core",
-    "crates/networking",
-    "crates/node",
-    "crates/vector-store",
     "crates/analytics",
-    "crates/api",
-    "crates/api-client",
-    "crates/cli",
-    "crates/mcp-server",
-    "crates/ai",
 ]
 
 [workspace.dependencies]
