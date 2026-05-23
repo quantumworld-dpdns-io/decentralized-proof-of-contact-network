@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use poi_core::{NodeId, PeerId};
+use poi_core::NodeId;
 
 pub fn query_proof_count_by_window(start: DateTime<Utc>, end: DateTime<Utc>) -> String {
     format!(
