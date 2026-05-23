@@ -18,5 +18,5 @@ chrono = { workspace = true }
 reqwest = { workspace = true }
 uuid = { workspace = true }
 colored = "2"
-indicatif = "0.17"
+indicatif = "0.18"
 csv = "1.3"
