@@ -7,6 +7,12 @@ use zeroize::Zeroize;
 #[serde(transparent)]
 pub struct NodeId(pub String);
 
+impl std::fmt::Display for NodeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(transparent)]
 pub struct ProofId(pub Uuid);
