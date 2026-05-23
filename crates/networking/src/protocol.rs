@@ -7,6 +7,8 @@ use ed25519_dalek::SigningKey;
 use tokio::sync::Mutex;
 use tracing::{debug, info, trace, warn};
 
+use uuid::Uuid;
+
 use crate::error::NetworkError;
 use crate::message::{
     Envelope, HandshakePayload, NetworkMessage, PeerEntry, PeerId, ProofOfContact,

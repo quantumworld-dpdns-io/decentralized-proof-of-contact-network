@@ -480,7 +480,9 @@ fn generate_self_signed_cert() -> Result<(Vec<rustls::pki_types::CertificateDer<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::NetworkConfig;
+use uuid::Uuid;
+
+use crate::config::NetworkConfig;
 
     #[tokio::test]
     async fn test_network_manager_create() {
