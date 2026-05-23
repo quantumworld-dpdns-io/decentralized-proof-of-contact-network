@@ -5,7 +5,6 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};

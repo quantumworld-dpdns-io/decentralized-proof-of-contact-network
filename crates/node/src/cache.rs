@@ -1,4 +1,4 @@
-use poi_core::{ContactProof, ContactProofExt, NodeId, OrbitalWindow, ProofMetadata, WindowType};
+use poi_core::{ContactProof, NodeId, OrbitalWindow, ProofMetadata, WindowType};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

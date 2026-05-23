@@ -4,7 +4,6 @@ use axum::routing::get;
 use axum::Router;
 use prometheus::{Encoder, Registry, TextEncoder};
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 

@@ -1,5 +1,5 @@
 use crate::error::RuntimeError;
-use poi_core::{ContactProof, ContactProofExt, NodeId, ProofId, OrbitalWindow, ProofMetadata, WindowType};
+use poi_core::{ContactProof, ContactProofExt};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
