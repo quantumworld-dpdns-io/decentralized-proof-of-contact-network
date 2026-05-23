@@ -14,6 +14,8 @@ pub mod duckdb;
 pub mod iceberg;
 
 pub mod queries;
+
+#[cfg(feature = "arrow")]
 pub mod pipeline;
 
 pub use error::AnalyticsError;
