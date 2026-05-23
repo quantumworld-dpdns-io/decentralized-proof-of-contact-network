@@ -5,7 +5,6 @@ use ed25519_dalek::Signer;
 use ed25519_dalek::Verifier;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use rand::RngCore;
 
 use crate::error::{Error, Result};
 use crate::types::{KeyPair, PqcSignature, PublicKey, SecretKey, Signature};
