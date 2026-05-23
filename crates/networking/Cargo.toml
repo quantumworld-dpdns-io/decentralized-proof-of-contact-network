@@ -6,7 +6,7 @@ description = "P2P networking layer for decentralized proof-of-contact network"
 
 [dependencies]
 poi-core = { path = "../core" }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
