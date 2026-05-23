@@ -200,81 +200,66 @@ pub mod tls {
     use std::sync::Arc;
 
     use async_trait::async_trait;
+    use rustls::pki_types::ServerName;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
-    use tokio::sync::broadcast;
-    use tokio_rustls::TlsAcceptor;
+    use tokio::sync::{Mutex, broadcast};
+    use tokio_rustls::{TlsAcceptor, TlsConnector};
     use tracing::{debug, info, warn};
 
     use super::{Connection, Transport, TransportMessage};
     use crate::error::NetworkError;
 
     pub struct TlsTransport {
-        inner: super::TcpTransport,
-        acceptor: Option<TlsAcceptor>,
+        listen_addr: SocketAddr,
+        acceptor: TlsAcceptor,
     }
 
     impl TlsTransport {
         pub fn new(listen_addr: SocketAddr, acceptor: TlsAcceptor) -> Self {
-            Self {
-                inner: super::TcpTransport::new(listen_addr),
-                acceptor: Some(acceptor),
-            }
+            Self { listen_addr, acceptor }
         }
     }
 
     #[async_trait]
     impl Transport for TlsTransport {
         async fn listen(&self) -> Result<broadcast::Receiver<TransportMessage>, NetworkError> {
-            let listener = TcpListener::bind(self.inner.listen_addr).await?;
-            info!("TLS transport listening on {}", self.inner.listen_addr);
+            let listener = TcpListener::bind(self.listen_addr).await?;
+            info!("TLS transport listening on {}", self.listen_addr);
             let (tx, rx) = broadcast::channel(1024);
             let local_addr = listener.local_addr()?;
-            let acceptor = self.acceptor.clone().unwrap();
+            let acceptor = self.acceptor.clone();
 
             tokio::spawn(async move {
                 loop {
                     match listener.accept().await {
                         Ok((stream, addr)) => {
-                            debug!("TLS connection accepted from {}", addr);
                             let tx = tx.clone();
                             let acceptor = acceptor.clone();
                             tokio::spawn(async move {
                                 match acceptor.accept(stream).await {
                                     Ok(tls_stream) => {
-                                        let (mut reader, mut writer) =
-                                            tokio::io::split(tls_stream);
+                                        let (mut reader, _) = tokio::io::split(tls_stream);
                                         let mut buf = vec![0u8; 4096];
                                         loop {
                                             match reader.read(&mut buf).await {
                                                 Ok(0) => break,
                                                 Ok(n) => {
-                                                    let msg = TransportMessage::new(
-                                                        local_addr,
-                                                        buf[..n].to_vec(),
-                                                    );
-                                                    if tx.send(msg).is_err() {
-                                                        break;
-                                                    }
+                                                    let msg = TransportMessage::new(local_addr, buf[..n].to_vec());
+                                                    if tx.send(msg).is_err() { break; }
                                                 }
                                                 Err(e) => {
-                                                    debug!(
-                                                        "TLS connection {} error: {}",
-                                                        addr, e
-                                                    );
+                                                    debug!("TLS {} error: {}", addr, e);
                                                     break;
                                                 }
                                             }
                                         }
                                     }
-                                    Err(e) => {
-                                        warn!("TLS handshake failed from {}: {}", addr, e);
-                                    }
+                                    Err(e) => warn!("TLS handshake failed from {}: {}", addr, e),
                                 }
                             });
                         }
-                        Err(e) => {
-                            warn!("Failed to accept TLS connection: {}", e);
-                        }
+                        Err(e) => warn!("Failed to accept TLS connection: {}", e),
                     }
                 }
             });
@@ -285,76 +270,50 @@ pub mod tls {
             let stream = tokio::time::timeout(
                 std::time::Duration::from_secs(10),
                 tokio::net::TcpStream::connect(addr),
-            )
-            .await
-            .map_err(|_| NetworkError::Timeout(format!("TLS connect to {}", addr)))??;
+            ).await.map_err(|_| NetworkError::Timeout(format!("TLS connect to {}", addr)))??;
 
-            use tokio_rustls::TlsConnector as RustlsConnector;
-            use std::sync::Arc as StdArc;
-            use rustls::ClientConfig;
+            let root_store = rustls::RootCertStore::empty();
+            let config = rustls::ClientConfig::builder()
+                .with_root_certificates(root_store)
+                .with_no_client_auth();
 
-            let config = ClientConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth()
-                .with_root_certificates(rustls::RootCertStore::empty());
+            let connector = TlsConnector::from(Arc::new(config));
+            let server_name = ServerName::try_from("localhost")
+                .map_err(|_| NetworkError::TlsError("invalid DNS name".into()))?;
 
-            let connector = RustlsConnector::from(StdArc::new(config));
             let tls_stream = connector
-                .connect(
-                    tokio_rustls::TlsConnector::from(StdArc::new(config))
-                        .connect(
-                            dns_name: rustls::pki_types::ServerName::try_from("localhost")
-                                .map_err(|_| NetworkError::TlsError("invalid DNS name".into()))?,
-                            stream,
-                        )
-                        .await
-                        .map_err(|e| NetworkError::TlsError(e.to_string()))?,
-                )
+                .connect(server_name, stream)
                 .await
                 .map_err(|e| NetworkError::TlsError(e.to_string()))?;
 
             debug!("TLS connected to {}", addr);
-            use super::TcpConnection;
-            // We need a wrapper for TLS connections. For now, wrap in a simple struct.
             Ok(Box::new(TlsConnection::new(tls_stream, addr)))
         }
 
-        async fn send(
-            &self,
-            conn: &mut Box<dyn Connection>,
-            msg: &TransportMessage,
-        ) -> Result<(), NetworkError> {
+        async fn send(&self, conn: &mut Box<dyn Connection>, msg: &TransportMessage) -> Result<(), NetworkError> {
             conn.send(&msg.data).await
         }
 
-        async fn receive(
-            &self,
-            conn: &mut Box<dyn Connection>,
-        ) -> Result<TransportMessage, NetworkError> {
+        async fn receive(&self, conn: &mut Box<dyn Connection>) -> Result<TransportMessage, NetworkError> {
             let data = conn.receive().await?;
             let addr = conn.remote_addr()?;
             Ok(TransportMessage::new(addr, data))
         }
 
         fn local_addr(&self) -> Result<SocketAddr, NetworkError> {
-            self.inner.local_addr()
+            Ok(self.listen_addr)
         }
     }
 
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio_rustls::TlsStream;
-    use std::sync::Arc as StdArc;
-    use tokio::sync::Mutex;
-
     pub struct TlsConnection {
-        stream: Arc<Mutex<TlsStream<tokio::net::TcpStream>>>,
+        stream: Arc<Mutex<tokio_rustls::TlsStream<tokio::net::TcpStream>>>,
         remote: SocketAddr,
         local: SocketAddr,
     }
 
     impl TlsConnection {
-        pub fn new(stream: TlsStream<tokio::net::TcpStream>, remote: SocketAddr) -> Self {
-            let local = stream.get_ref().0.local_addr().unwrap();
+        pub fn new(stream: tokio_rustls::TlsStream<tokio::net::TcpStream>, remote: SocketAddr) -> Self {
+            let local = stream.get_ref().0.local_addr().ok().unwrap_or(remote);
             Self {
                 stream: Arc::new(Mutex::new(stream)),
                 remote,
@@ -384,13 +343,8 @@ pub mod tls {
             Ok(buf)
         }
 
-        fn remote_addr(&self) -> Result<SocketAddr, NetworkError> {
-            Ok(self.remote)
-        }
-
-        fn local_addr(&self) -> Result<SocketAddr, NetworkError> {
-            Ok(self.local)
-        }
+        fn remote_addr(&self) -> Result<SocketAddr, NetworkError> { Ok(self.remote) }
+        fn local_addr(&self) -> Result<SocketAddr, NetworkError> { Ok(self.local) }
 
         async fn close(&mut self) -> Result<(), NetworkError> {
             let mut stream = self.stream.lock().await;
