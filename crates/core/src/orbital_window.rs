@@ -145,7 +145,6 @@ pub fn emergency_window(duration_minutes: i64) -> OrbitalWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
 
     #[test]
     fn test_orbital_window_new() {
