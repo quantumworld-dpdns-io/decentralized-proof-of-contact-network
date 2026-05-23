@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 pub struct TelemetryHandle {
     pub metrics_registry: Option<Registry>,
+    #[allow(dead_code)]
     metrics_server: Option<JoinHandle<()>>,
 }
 
