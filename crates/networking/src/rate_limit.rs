@@ -5,6 +5,8 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::Mutex;
 
+use uuid::Uuid;
+
 use crate::error::NetworkError;
 use crate::message::PeerId;
 
