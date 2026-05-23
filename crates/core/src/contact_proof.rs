@@ -71,8 +71,7 @@ impl ContactProofExt for ContactProof {
             .map_err(|_| Error::InvalidSignature)?
             .try_into()
             .map_err(|_| Error::InvalidSignature)?;
-        let dalek_sig = DalekSignature::from_bytes(&sig_bytes)
-            .map_err(|e| Error::CryptoError(e.to_string()))?;
+        let dalek_sig = DalekSignature::from_bytes(&sig_bytes);
         Ok(verifying_key.verify(&data, &dalek_sig).is_ok())
     }
 
