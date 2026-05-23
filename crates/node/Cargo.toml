@@ -7,7 +7,7 @@ description = "Node runtime for decentralized proof-of-contact network"
 [dependencies]
 poi-core = { path = "../core" }
 poi-vector-store = { path = "../vector-store" }
-poi-analytics = { path = "../analytics" }
+poi-analytics = { path = "../analytics", default-features = false }
 poi-api = { path = "../api" }
 poi-ai = { path = "../ai" }
 serde = { workspace = true }
