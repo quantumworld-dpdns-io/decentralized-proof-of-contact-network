@@ -27,3 +27,4 @@ scripts/auto_commit.sh
 
 #large files
 target/debug/deps
+./target/debug/deps
