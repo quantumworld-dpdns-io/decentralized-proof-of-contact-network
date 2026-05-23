@@ -1,0 +1,37 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: poi-standard
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: storage
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: ebs.csi.eks.amazonaws.com
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+  fsType: ext4
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: poi-fast
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: storage
+provisioner: ebs.csi.eks.amazonaws.com
+parameters:
+  type: gp3
+  iops: "16000"
+  throughput: "1000"
+  encrypted: "true"
+  fsType: ext4
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
