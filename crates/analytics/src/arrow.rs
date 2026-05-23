@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    ArrayRef, Float64Array, StringBuilder, StringArray, TimestampNanosecondArray,
+    ArrayRef, Float64Array, StringArray, TimestampNanosecondArray,
 };
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use arrow::record_batch::RecordBatch;
-use poi_core::{ContactProof, NodeId, VerificationStatus};
+use poi_core::{ContactProof, VerificationStatus};
 
 use crate::Result;
 
