@@ -1,5 +1,4 @@
 use anyhow::{bail, Context, Result};
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
 

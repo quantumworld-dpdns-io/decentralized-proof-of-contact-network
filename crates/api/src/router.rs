@@ -147,21 +147,21 @@ async fn request_logging_middleware(
 }
 
 pub fn create_router(state: AppState) -> Router {
-    let api_config = &state.api_config;
-    let rate_limit_rpm = api_config.rate_limit_rpm;
-    let max_body_size = api_config.max_body_size;
+    let rate_limit_rpm = state.api_config.rate_limit_rpm;
+    let max_body_size = state.api_config.max_body_size;
+    let enable_swagger = state.api_config.enable_swagger;
+    let allowed_origins = state.api_config.allowed_origins.clone();
 
     let rate_limiter = std::sync::Arc::new(RateLimiter::new(rate_limit_rpm, 60));
     let auth_config = state.auth_config.clone();
 
-    let cors = if api_config.allowed_origins.is_empty() {
+    let cors = if allowed_origins.is_empty() {
         CorsLayer::new()
             .allow_origin(Any)
             .allow_methods(Any)
             .allow_headers(Any)
     } else {
-        let origins: Vec<_> = api_config
-            .allowed_origins
+        let origins: Vec<_> = allowed_origins
             .iter()
             .map(|o| o.parse().expect("Invalid origin"))
             .collect();
@@ -225,7 +225,7 @@ pub fn create_router(state: AppState) -> Router {
         .layer(RequestBodyLimitLayer::new(max_body_size))
         .with_state(state);
 
-    if api_config.enable_swagger {
+    if enable_swagger {
         router = router.merge(
             SwaggerUi::new("/api/v1/docs")
                 .url("/api/v1/openapi.json", ApiDoc::openapi()),
