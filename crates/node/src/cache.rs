@@ -130,8 +130,7 @@ impl CacheStats {
 mod tests {
     use super::*;
     use chrono::{Duration as ChronoDuration, Utc};
-    use poi_core::{NodeId, OrbitalWindow, ProofMetadata, WindowType};
-    use std::time::Duration;
+    use poi_core::{ContactProofExt, NodeId, OrbitalWindow, ProofMetadata, WindowType};
 
     fn make_proof(id_val: u64) -> ContactProof {
         let proof_id = poi_core::ProofId(uuid::Uuid::from_u64_pair(id_val, 0));
