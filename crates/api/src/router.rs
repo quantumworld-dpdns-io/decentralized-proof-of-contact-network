@@ -244,6 +244,7 @@ mod tests {
 
     use crate::auth::AuthConfig;
     use crate::config::ApiConfig;
+    use crate::models::AppStateInner;
 
     #[tokio::test]
     async fn test_router_health() {
