@@ -470,8 +470,8 @@ fn generate_self_signed_cert() -> Result<(Vec<rustls::pki_types::CertificateDer<
     let certified_key = rcgen::generate_simple_self_signed(vec!["localhost".into()])
         .map_err(|e| NetworkError::TlsError(e.to_string()))?;
 
-    let cert_der = CertificateDer::from(certified_key.cert.serialize_der().unwrap());
-    let key_der = PrivateKeyDer::try_from(certified_key.key_pair.serialize_der().to_vec())
+    let cert_der = certified_key.cert.der().clone();
+    let key_der = PrivateKeyDer::try_from(certified_key.key_pair.serialize_der())
         .map_err(|e| NetworkError::TlsError(format!("invalid private key: {}", e)))?;
 
     Ok((vec![cert_der], key_der))
