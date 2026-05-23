@@ -1,7 +1,10 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use ed25519_dalek::{Signer, Signature as DalekSignature, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature as DalekSignature, SigningKey, VerifyingKey};
+use ed25519_dalek::Signer;
+use ed25519_dalek::Verifier;
 use rand::rngs::OsRng;
+use rand::RngCore;
 use rand::RngCore;
 
 use crate::error::{Error, Result};
