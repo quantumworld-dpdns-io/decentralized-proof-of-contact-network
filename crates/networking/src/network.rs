@@ -478,8 +478,6 @@ fn generate_self_signed_cert() -> Result<(Vec<rustls::pki_types::CertificateDer<
     Ok((vec![cert_der], key_der))
 }
 
-use std::collections::HashSet;
-
 #[cfg(test)]
 mod tests {
     use super::*;
