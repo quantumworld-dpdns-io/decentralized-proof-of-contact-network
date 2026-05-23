@@ -1,0 +1,63 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: poi-node-pdb
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: node
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: node
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: poi-api-pdb
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: poi-dashboard-pdb
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: dashboard
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: poi-mcp-server-pdb
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: mcp-server
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: mcp-server
