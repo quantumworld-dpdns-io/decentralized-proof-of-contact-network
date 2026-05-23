@@ -588,12 +588,13 @@ mod tests {
 
         let connect_addr = actual_listen;
         let msg_data = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let msg_data_clone = msg_data.clone();
 
         tokio::spawn(async move {
             let mut conn = tokio::net::TcpStream::connect(connect_addr).await.unwrap();
-            let len = (msg_data.len() as u32).to_be_bytes();
+            let len = (msg_data_clone.len() as u32).to_be_bytes();
             conn.write_all(&len).await.unwrap();
-            conn.write_all(&msg_data).await.unwrap();
+            conn.write_all(&msg_data_clone).await.unwrap();
             conn.flush().await.unwrap();
         });
 
