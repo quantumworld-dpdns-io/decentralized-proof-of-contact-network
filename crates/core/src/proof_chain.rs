@@ -158,7 +158,7 @@ mod tests {
         let kp = KeyPair::generate();
         let mut chain = ProofChain::new();
         let proof = make_test_proof(&kp, 0);
-        let id = proof.id;
+        let id = proof.id.clone();
         chain.append(proof).unwrap();
         let retrieved = chain.get_proof(&id);
         assert!(retrieved.is_some());
