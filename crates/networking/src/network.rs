@@ -16,7 +16,7 @@ use crate::discovery::{
 };
 use crate::error::NetworkError;
 use crate::gossip::GossipProtocol;
-use crate::message::{Envelope, HandshakePayload, NetworkMessage, PeerEntry, PeerId, ProofOfContact};
+use crate::message::{Envelope, NetworkMessage, PeerId, ProofOfContact};
 use crate::peer_store::{InMemoryPeerStore, PeerRecord, PeerReputation, PeerStore, PersistentPeerStore};
 use crate::protocol::{
     CompositeHandler, HandshakeHandler, ProofRelayHandler, ProofRequestHandler,
