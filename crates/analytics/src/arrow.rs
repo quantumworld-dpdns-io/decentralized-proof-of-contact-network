@@ -39,7 +39,7 @@ pub struct ProofBatchBuilder {
     scores: Vec<f64>,
     protocol_versions: Vec<String>,
     proof_purposes: Vec<String>,
-    chain_positions: Vec<Option<i64>>,
+    chain_positions: Vec<Option<u64>>,
     signatures: Vec<String>,
 }
 
