@@ -35,7 +35,7 @@ impl TrustLevel {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerReputation {
     pub score: f64,
     pub trust_level: TrustLevel,
