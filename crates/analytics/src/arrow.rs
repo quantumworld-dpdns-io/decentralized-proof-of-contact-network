@@ -122,7 +122,7 @@ impl ProofBatchBuilder {
             let mut builder = arrow::array::Int64Builder::new();
             for pos in &self.chain_positions {
                 match pos {
-                    Some(p) => builder.append_value(*p),
+                    Some(p) => builder.append_value(*p as i64),
                     None => builder.append_null(),
                 }
             }
