@@ -61,7 +61,7 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
-    pub(crate) fn new(config: &McpConfig) -> Self {
+    pub fn new(config: &McpConfig) -> Self {
         Self {
             http_client: reqwest::Client::new(),
             api_url: config.api_url.clone(),
@@ -84,7 +84,7 @@ impl ApiClient {
         headers
     }
 
-    pub(crate) async fn create_proof(&self, args: &Value) -> Result<Value> {
+    pub async fn create_proof(&self, args: &Value) -> Result<Value> {
         let url = format!("{}/api/v1/proofs", self.api_url);
         let resp = self
             .http_client
