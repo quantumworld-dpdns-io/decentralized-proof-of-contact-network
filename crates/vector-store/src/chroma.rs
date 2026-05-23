@@ -241,6 +241,8 @@ impl VectorStore for ChromaDB {
 
         let mut results = Vec::new();
 
+        let empty_vec = Vec::new();
+
         if let Some(ids) = body["ids"]
             .as_array()
             .and_then(|a| a.first())
@@ -250,12 +252,12 @@ impl VectorStore for ChromaDB {
                 .as_array()
                 .and_then(|a| a.first())
                 .and_then(|a| a.as_array())
-                .unwrap_or(&Vec::new());
+                .unwrap_or(&empty_vec);
             let metadatas = body["metadatas"]
                 .as_array()
                 .and_then(|a| a.first())
                 .and_then(|a| a.as_array())
-                .unwrap_or(&Vec::new());
+                .unwrap_or(&empty_vec);
 
             for (i, id_val) in ids.iter().enumerate() {
                 let id = id_val.as_str().unwrap_or("").to_string();
