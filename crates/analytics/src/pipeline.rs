@@ -280,7 +280,7 @@ impl AnalyticsPipeline {
 mod tests {
     use super::*;
     use crate::config::AnalyticsConfig;
-    use chrono::TimeZone;
+    use chrono::{TimeZone, Utc};
     use poi_core::{
         NodeId, OrbitalWindow, ProofId, ProofMetadata, Signature, WindowType,
     };
