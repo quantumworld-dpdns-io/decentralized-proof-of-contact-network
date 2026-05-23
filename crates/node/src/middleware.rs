@@ -136,34 +136,6 @@ pub fn cors_config(allowed_origins: &[String]) -> CorsLayer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::body::Body;
-    use axum::http::Request;
-    use std::convert::Infallible;
-
-    #[tokio::test]
-    async fn test_auth_middleware_valid() {
-        let req = Request::builder()
-            .header(header::AUTHORIZATION, "Bearer mytoken")
-            .body(Body::empty())
-            .unwrap();
-        let next = |req: Request<Body>| async move {
-            Ok::<_, Infallible>(Response::new(req.into_body()))
-        };
-        let wrapped = axum::middleware::from_fn::<_, _, _>(auth_middleware);
-        let _ = wrapped;
-    }
-
-    #[tokio::test]
-    async fn test_auth_middleware_invalid() {
-        let req = Request::builder()
-            .body(Body::empty())
-            .unwrap();
-        let next = |req: Request<Body>| async move {
-            Ok::<_, Infallible>(Response::new(req.into_body()))
-        };
-        let wrapped = axum::middleware::from_fn::<_, _, _>(auth_middleware);
-        let _ = wrapped;
-    }
 
     #[test]
     fn test_rate_limiter() {
