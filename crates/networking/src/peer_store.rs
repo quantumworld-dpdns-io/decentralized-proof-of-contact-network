@@ -99,7 +99,7 @@ impl PeerReputation {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerRecord {
     pub id: PeerId,
     pub address: SocketAddr,
