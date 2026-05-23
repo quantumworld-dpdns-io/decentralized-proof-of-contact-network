@@ -1,18 +1,39 @@
-use serde::{Deserialize, Serialize};
+pub mod error;
+pub mod config;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnalyticsConfig {
-    #[serde(default)]
-    pub iceberg_warehouse: Option<String>,
-    #[serde(default)]
-    pub duckdb_path: Option<String>,
-}
+#[cfg(feature = "arrow")]
+pub mod arrow;
 
-impl Default for AnalyticsConfig {
-    fn default() -> Self {
-        Self {
-            iceberg_warehouse: None,
-            duckdb_path: None,
-        }
-    }
+#[cfg(feature = "datafusion")]
+pub mod datafusion;
+
+#[cfg(feature = "duckdb")]
+pub mod duckdb;
+
+#[cfg(feature = "iceberg")]
+pub mod iceberg;
+
+pub mod queries;
+pub mod pipeline;
+
+pub use error::{AnalyticsError, Result};
+pub use config::AnalyticsConfig;
+
+#[cfg(feature = "arrow")]
+pub use arrow::*;
+
+#[cfg(feature = "datafusion")]
+pub use datafusion::*;
+
+#[cfg(feature = "duckdb")]
+pub use duckdb::*;
+
+#[cfg(feature = "iceberg")]
+pub use iceberg::*;
+
+pub use queries::*;
+pub use pipeline::*;
+
+pub fn version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
 }
