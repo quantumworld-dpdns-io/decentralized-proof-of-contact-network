@@ -104,7 +104,7 @@ impl Connection for TcpConnection {
 
     async fn close(&mut self) -> Result<(), NetworkError> {
         let mut stream = self.stream.lock().await;
-        stream.shutdown().map_err(|e| NetworkError::TransportError(e.to_string()))
+        stream.shutdown().await.map_err(|e| NetworkError::TransportError(e.to_string()))
     }
 }
 
