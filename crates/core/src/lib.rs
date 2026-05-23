@@ -12,8 +12,8 @@ pub mod metrics;
 
 pub use error::{Error, Result};
 pub use types::{
-    ContactProof, KeyPair, NodeId, OrbitalWindow, PeerId, ProofChain, ProofId, ProofMetadata,
-    PublicKey, PqcSignature, SecretKey, Signature, VerificationStatus, WindowType,
+    ContactProof, KeyPair, NodeId, OrbitalWindow, PeerId, ProofId, ProofMetadata, PublicKey,
+    PqcSignature, SecretKey, Signature, VerificationStatus, WindowType,
 };
 pub use node_id::{generate_node_id, validate_node_id};
 pub use keypair::KeyPairExt;

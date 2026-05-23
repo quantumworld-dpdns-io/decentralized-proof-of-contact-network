@@ -465,20 +465,17 @@ impl NetworkManager {
 }
 
 #[cfg(feature = "tls")]
-fn generate_self_signed_cert() -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), NetworkError> {
+fn generate_self_signed_cert() -> Result<(Vec<rustls::pki_types::CertificateDer<'static>>, rustls::pki_types::PrivateKeyDer<'static>), NetworkError> {
     use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-    use std::time::SystemTime;
 
     let cert = rcgen::generate_simple_self_signed(vec!["localhost".into()])
         .map_err(|e| NetworkError::TlsError(e.to_string()))?;
 
-    let cert_der = cert.serialize_der().unwrap();
-    let key_der = cert.serialize_private_key_der();
+    let cert_der = CertificateDer::from(cert.serialize_der().unwrap());
+    let key_der = PrivateKeyDer::try_from(cert.serialize_private_key_der())
+        .map_err(|e| NetworkError::TlsError(format!("invalid private key: {}", e)))?;
 
-    let cert = rustls::Certificate(cert_der);
-    let key = rustls::PrivateKey(key_der);
-
-    Ok((vec![cert], key))
+    Ok((vec![cert_der], key_der))
 }
 
 use std::collections::HashSet;
