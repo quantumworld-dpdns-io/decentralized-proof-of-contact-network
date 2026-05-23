@@ -198,7 +198,7 @@ pub fn predefined_queries() -> Vec<QueryDefinition> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
+    use chrono::{TimeZone, Utc};
 
     #[test]
     fn test_query_proof_count_by_window() {
