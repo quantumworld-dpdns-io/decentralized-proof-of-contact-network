@@ -51,10 +51,4 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<chrono::SerdeError> for Error {
-    fn from(e: chrono::SerdeError) -> Self {
-        Error::SerializationError(e.to_string())
-    }
-}
-
 pub type Result<T> = std::result::Result<T, Error>;
