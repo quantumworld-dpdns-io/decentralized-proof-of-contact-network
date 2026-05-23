@@ -8,6 +8,8 @@ use tokio::time;
 use tracing::{debug, info, trace, warn};
 
 use crate::error::NetworkError;
+use uuid::Uuid;
+
 use crate::message::PeerId;
 use crate::transport::Transport;
 
