@@ -1,45 +1,39 @@
-use serde::{Deserialize, Serialize};
+pub mod config;
+pub mod connection;
+pub mod discovery;
+pub mod error;
+pub mod gossip;
+pub mod message;
+pub mod network;
+pub mod peer_store;
+pub mod protocol;
+pub mod rate_limit;
+pub mod sync;
+pub mod transport;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkConfig {
-    #[serde(default = "default_listen_addr")]
-    pub listen_addr: String,
-    #[serde(default)]
-    pub external_addr: Option<String>,
-    #[serde(default)]
-    pub bootstrap_peers: Vec<String>,
-    #[serde(default = "default_max_peers")]
-    pub max_peers: usize,
-}
+pub use config::NetworkConfig;
+pub use connection::{ConnectionManager, ConnectionState, PooledConnection};
+pub use discovery::{
+    BootstrapDiscovery, CompositeDiscovery, DhtDiscovery, MdnsDiscovery, PeerDiscovery,
+    PeerExchange, PeerInfo,
+};
+pub use error::NetworkError;
+pub use gossip::GossipProtocol;
+pub use message::{
+    Envelope, HandshakePayload, MessageHeader, NetworkMessage, PeerEntry, PeerId, ProofOfContact,
+};
+pub use network::{NetworkEvent, NetworkManager};
+pub use peer_store::{
+    InMemoryPeerStore, PeerRecord, PeerReputation, PeerStore, PersistentPeerStore, TrustLevel,
+};
+pub use protocol::{
+    CompositeHandler, HandshakeHandler, Handler, ProofRelayHandler, ProofRequestHandler,
+    ProofSubmissionHandler, SyncHandler,
+};
+pub use rate_limit::RateLimiter;
+pub use sync::{StateSync, SyncProgress, SyncState};
+pub use transport::{
+    Connection as TransportConnection, TcpTransport, Transport, TransportMessage,
+};
 
-impl Default for NetworkConfig {
-    fn default() -> Self {
-        Self {
-            listen_addr: default_listen_addr(),
-            external_addr: None,
-            bootstrap_peers: Vec::new(),
-            max_peers: default_max_peers(),
-        }
-    }
-}
-
-fn default_listen_addr() -> String {
-    "0.0.0.0:9090".to_string()
-}
-
-fn default_max_peers() -> usize {
-    50
-}
-
-#[derive(Debug)]
-pub struct NetworkManager;
-
-impl NetworkManager {
-    pub async fn start(_config: &NetworkConfig) -> anyhow::Result<Self> {
-        Ok(Self)
-    }
-
-    pub async fn stop(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-}
+pub type Result<T> = std::result::Result<T, NetworkError>;
