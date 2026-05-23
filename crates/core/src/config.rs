@@ -41,10 +41,6 @@ impl CoreConfig {
         let content = std::fs::read_to_string(path)?;
         if path.ends_with(".yaml") || path.ends_with(".yml") {
             Ok(serde_yaml::from_str(&content)?)
-        } else if path.ends_with(".json") {
-            Ok(serde_json::from_str(&content)?)
-        } else if path.ends_with(".toml") {
-            Ok(toml::from_str(&content)?)
         } else {
             Ok(serde_json::from_str(&content)?)
         }
