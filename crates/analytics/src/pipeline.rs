@@ -177,7 +177,7 @@ impl AnalyticsPipeline {
             let file_reader = std::fs::File::open(&file_path)
                 .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
             let reader =
-                parquet::arrow::ParquetRecordBatchReaderBuilder::try_new(file_reader)
+                parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(file_reader)
                     .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?
                     .build()
                     .map_err(|e| crate::AnalyticsError::Pipeline(e.to_string()))?;
