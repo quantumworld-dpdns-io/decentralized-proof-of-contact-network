@@ -1,5 +1,5 @@
 use crate::error::RuntimeError;
-use poi_core::{ContactProof, ContactProofExt};
+use poi_core::ContactProof;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
