@@ -55,29 +55,6 @@ pub fn hash_concatenation(hashes: &[String]) -> String {
     hash_blake3(&combined)
 }
 
-fn compute_merkle_root(hashes: &[String]) -> String {
-    if hashes.is_empty() {
-        return hash_blake3(b"empty");
-    }
-    if hashes.len() == 1 {
-        return hashes[0].clone();
-    }
-
-    let mut current: Vec<String> = hashes.to_vec();
-    while current.len() > 1 {
-        let mut next = Vec::new();
-        for chunk in current.chunks(2) {
-            if chunk.len() == 2 {
-                next.push(hash_concatenation(&[chunk[0].clone(), chunk[1].clone()]));
-            } else {
-                next.push(chunk[0].clone());
-            }
-        }
-        current = next;
-    }
-    current.into_iter().next().unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
