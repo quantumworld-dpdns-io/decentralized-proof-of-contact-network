@@ -43,7 +43,6 @@ pub async fn create_proof(
 
     let mut proofs = state.proofs.write().await;
     proofs.push(proof.clone());
-    let proof_count = proofs.len() as u64;
     drop(proofs);
 
     let _ = state.event_tx.send(AppEvent::ProofCreated(proof.clone()));

@@ -8,11 +8,6 @@ use crate::error::{ApiError, ApiResult};
 use crate::events::AppEvent;
 use crate::models::{AppState, WindowCreateRequest};
 
-#[derive(Debug, Deserialize)]
-pub struct WindowQueryParams {
-    pub window_type: Option<String>,
-}
-
 pub async fn list_windows(State(state): State<AppState>) -> ApiResult<Json<Vec<OrbitalWindow>>> {
     let windows = state.windows.read().await;
     Ok(Json(windows.clone()))

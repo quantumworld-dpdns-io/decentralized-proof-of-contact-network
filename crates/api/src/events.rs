@@ -5,7 +5,7 @@ use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
-use futures::stream::{self, StreamExt};
+use futures::stream::{self};
 use poi_core::types::{ContactProof, NodeId, OrbitalWindow, ProofId, VerificationStatus};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
