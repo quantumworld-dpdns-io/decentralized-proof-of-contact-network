@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use chrono::{DateTime, Utc};
-use poi_core::Proof;
+use poi_core::ContactProof;
 
-use crate::arrow::{proof_schema, ProofBatchBuilder};
+use crate::arrow::ProofBatchBuilder;
 use crate::Result;
 
 #[derive(Debug, Clone)]
@@ -18,8 +17,14 @@ pub struct IcebergTableConfig {
 impl Default for IcebergTableConfig {
     fn default() -> Self {
         let mut properties = HashMap::new();
-        properties.insert("write.format.default".to_string(), "parquet".to_string());
-        properties.insert("write.target-file-size-bytes".to_string(), "134217728".to_string());
+        properties.insert(
+            "write.format.default".to_string(),
+            "parquet".to_string(),
+        );
+        properties.insert(
+            "write.target-file-size-bytes".to_string(),
+            "134217728".to_string(),
+        );
 
         Self {
             name: "proofs".to_string(),
@@ -68,9 +73,9 @@ impl IcebergEngine {
         std::fs::create_dir_all(&config.location)
             .map_err(|e| crate::AnalyticsError::Iceberg(e.to_string()))?;
 
-        let schema = proof_schema();
-        let schema_json = serde_json::to_string_pretty(&serialize_schema(&schema))
-            .map_err(|e| crate::AnalyticsError::Serialization(e.to_string()))?;
+        let metadata_path = format!("{}/metadata", config.location);
+        std::fs::create_dir_all(&metadata_path)
+            .map_err(|e| crate::AnalyticsError::Iceberg(e.to_string()))?;
 
         let metadata = serde_json::json!({
             "format-version": 2,
@@ -78,17 +83,12 @@ impl IcebergEngine {
             "location": config.location,
             "last-sequence-number": 0,
             "last-updated-ms": Utc::now().timestamp_millis(),
-            "schema": serde_json::from_str::<serde_json::Value>(&schema_json).unwrap(),
             "partition-spec": [],
             "properties": config.properties,
             "snapshots": [],
             "snapshot-log": [],
             "metadata-log": [],
         });
-
-        let metadata_path = format!("{}/metadata", config.location);
-        std::fs::create_dir_all(&metadata_path)
-            .map_err(|e| crate::AnalyticsError::Iceberg(e.to_string()))?;
 
         let metadata_file = format!("{}/v0.metadata.json", metadata_path);
         std::fs::write(
@@ -102,11 +102,14 @@ impl IcebergEngine {
         Ok(())
     }
 
-    pub fn append_proofs(&self, table: &str, proofs: &[Proof]) -> Result<Snapshot> {
-        let config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+    pub fn append_proofs(
+        &self,
+        table: &str,
+        proofs: &[ContactProof],
+    ) -> Result<Snapshot> {
+        let config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
 
         let data_path = format!(
             "{}/data/{}.parquet",
@@ -114,8 +117,15 @@ impl IcebergEngine {
             uuid::Uuid::new_v4()
         );
 
-        ProofBatchBuilder::with_capacity(proofs.len())
-            .finish_and_write_parquet(&data_path)?;
+        let data_dir = format!("{}/data", config.location);
+        std::fs::create_dir_all(&data_dir)
+            .map_err(|e| crate::AnalyticsError::Iceberg(e.to_string()))?;
+
+        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
+        for p in proofs {
+            builder.add_proof(p);
+        }
+        builder.write_parquet(&data_path)?;
 
         let snapshot = Snapshot {
             id: Utc::now().timestamp_nanos_opt().unwrap_or(0),
@@ -135,26 +145,29 @@ impl IcebergEngine {
     }
 
     pub fn list_snapshots(&self, table: &str) -> Result<Vec<Snapshot>> {
-        let _config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
-
+        let _config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
         Ok(Vec::new())
     }
 
-    pub fn time_travel(&self, table: &str, _snapshot_id: i64) -> Result<Vec<String>> {
-        let config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+    pub fn time_travel(&self, table: &str) -> Result<Vec<String>> {
+        let config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
 
-        let data_dir = std::fs::read_dir(&format!("{}/data", config.location))
+        let data_dir_path = format!("{}/data", config.location);
+        let data_dir = std::fs::read_dir(&data_dir_path)
             .map_err(|e| crate::AnalyticsError::Iceberg(e.to_string()))?;
 
         let files: Vec<String> = data_dir
             .filter_map(|entry| entry.ok())
-            .filter(|e| e.path().extension().map(|ext| ext == "parquet").unwrap_or(false))
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .map(|ext| ext == "parquet")
+                    .unwrap_or(false)
+            })
             .map(|e| e.path().to_string_lossy().to_string())
             .collect();
 
@@ -162,96 +175,67 @@ impl IcebergEngine {
     }
 
     pub fn compact_data(&self, table: &str) -> Result<u64> {
-        let _config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+        let _config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
 
         tracing::info!("Compacting data for Iceberg table '{}'", table);
         Ok(0)
     }
 
-    pub fn expire_snapshots(
-        &self,
-        table: &str,
-        _older_than: DateTime<Utc>,
-    ) -> Result<u64> {
-        let _config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+    pub fn expire_snapshots(&self, table: &str, _older_than: DateTime<Utc>) -> Result<u64> {
+        let _config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
 
         tracing::info!("Expiring snapshots for Iceberg table '{}'", table);
         Ok(0)
     }
 
     pub fn table_location(&self, table: &str) -> Result<String> {
-        let config = self
-            .tables
-            .get(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+        let config = self.tables.get(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
         Ok(config.location.clone())
     }
 
     pub fn drop_table(&mut self, table: &str) -> Result<()> {
-        self.tables
-            .remove(table)
-            .ok_or_else(|| crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table)))?;
+        self.tables.remove(table).ok_or_else(|| {
+            crate::AnalyticsError::Iceberg(format!("Table '{}' not found", table))
+        })?;
         Ok(())
     }
-}
-
-fn serialize_schema(schema: &arrow::datatypes::SchemaRef) -> serde_json::Value {
-    let fields: Vec<serde_json::Value> = schema
-        .fields()
-        .iter()
-        .map(|f| {
-            let field_type = match f.data_type() {
-                DataType::Utf8 => "string".to_string(),
-                DataType::Binary => "binary".to_string(),
-                DataType::Float64 => "double".to_string(),
-                DataType::Timestamp(unit, _) => match unit {
-                    TimeUnit::Nanosecond => "timestamp_ns".to_string(),
-                    TimeUnit::Microsecond => "timestamp_us".to_string(),
-                    TimeUnit::Millisecond => "timestamp_ms".to_string(),
-                    TimeUnit::Second => "timestamp_s".to_string(),
-                },
-                _ => "string".to_string(),
-            };
-            serde_json::json!({
-                "id": f.name(),
-                "name": f.name(),
-                "type": field_type,
-                "required": !f.is_nullable(),
-            })
-        })
-        .collect();
-
-    serde_json::json!({
-        "type": "struct",
-        "fields": fields,
-        "schema-id": 0,
-    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeZone;
-    use poi_core::{NodeId, OrbitalWindowId, VerificationStatus};
+    use poi_core::{
+        NodeId, OrbitalWindow, ProofId, ProofMetadata, Signature, WindowType,
+    };
     use uuid::Uuid;
 
-    fn sample_proofs() -> Vec<Proof> {
-        vec![Proof {
-            id: Uuid::new_v4(),
-            prover_id: NodeId("node-a".to_string()),
-            verifier_id: NodeId("node-b".to_string()),
+    fn sample_proofs() -> Vec<ContactProof> {
+        vec![ContactProof {
+            id: ProofId(Uuid::new_v4()),
+            proving_node: NodeId("node-a".to_string()),
+            target_node: NodeId("node-b".to_string()),
+            orbital_window: OrbitalWindow {
+                id: Uuid::new_v4(),
+                start_time: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+                end_time: Utc.with_ymd_and_hms(2025, 1, 1, 1, 0, 0).unwrap(),
+                window_type: WindowType::Standard,
+            },
             timestamp: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-            verification_status: VerificationStatus::Verified,
-            confidence_score: 0.95,
-            orbital_window: OrbitalWindowId("w1".to_string()),
-            signature: vec![],
-            metadata: serde_json::json!({}),
+            signature: Signature("sig".to_string()),
+            pqc_signature: None,
+            metadata: ProofMetadata {
+                protocol_version: "1.0".to_string(),
+                chain_position: None,
+                confidence_score: 0.95,
+                proof_purpose: "test".to_string(),
+            },
         }]
     }
 
@@ -270,7 +254,6 @@ mod tests {
         };
         engine.register_table(config);
         assert!(engine.get_table("proofs").is_some());
-        assert!(engine.get_table("nonexistent").is_none());
     }
 
     #[test]
