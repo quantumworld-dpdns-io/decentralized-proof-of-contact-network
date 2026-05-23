@@ -12,8 +12,8 @@ pub struct DuckDbEngine {
 impl DuckDbEngine {
     pub fn open(path: impl Into<String>) -> Result<Self> {
         let path: String = path.into();
-        let mut config = Config::default();
-        config.access_mode(AccessMode::ReadWrite)
+        let config = Config::default()
+            .access_mode(AccessMode::ReadWrite)
             .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
         let conn = Connection::open_with_flags(&path, config)
             .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
