@@ -23,3 +23,7 @@ vendor/
 .env.*
 !.env.example
 scripts/auto_commit.sh
+
+
+#large files
+target/debug/deps
