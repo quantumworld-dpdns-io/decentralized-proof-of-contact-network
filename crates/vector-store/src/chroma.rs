@@ -320,14 +320,16 @@ impl VectorStore for ChromaDB {
 }
 
 fn build_chroma_filter(filter: &Filter) -> Value {
-    if filter.conditions.len() == 1 {
-        build_condition(&filter.conditions[0])
-    } else {
-        let conditions: Vec<Value> = filter.conditions.iter().map(build_condition).collect();
-        let mut and = serde_json::Map::new();
-        and.insert("$and".to_string(), Value::Array(conditions));
-        Value::Object(and)
+    if filter.conditions.is_empty() {
+        return serde_json::json!({});
     }
+    if filter.conditions.len() == 1 {
+        return build_condition(&filter.conditions[0]);
+    }
+    let conditions: Vec<Value> = filter.conditions.iter().map(build_condition).collect();
+    let mut and = serde_json::Map::new();
+    and.insert("$and".to_string(), Value::Array(conditions));
+    Value::Object(and)
 }
 
 fn build_condition(condition: &FilterCondition) -> Value {

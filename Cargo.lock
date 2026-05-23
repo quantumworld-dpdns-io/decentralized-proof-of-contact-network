@@ -3955,7 +3955,6 @@ dependencies = [
  "poi-analytics",
  "poi-api",
  "poi-core",
- "poi-networking",
  "poi-vector-store",
  "prometheus",
  "serde",
