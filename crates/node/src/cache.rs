@@ -129,11 +129,29 @@ impl CacheStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use poi_core::{ContactProof, NodeId};
+    use chrono::{Duration, Utc};
 
-    fn make_proof(id: u64) -> ContactProof {
-        let mut proof = ContactProof::new(NodeId(id), vec![id as u8]);
-        proof.id = poi_core::ProofId(uuid::Uuid::from_u64_pair(id, 0));
+    fn make_proof(id_val: u64) -> ContactProof {
+        let proof_id = poi_core::ProofId(uuid::Uuid::from_u64_pair(id_val, 0));
+        let window = OrbitalWindow::new(
+            Utc::now(),
+            Utc::now() + Duration::hours(1),
+            WindowType::Standard,
+        );
+        let metadata = ProofMetadata {
+            protocol_version: "1.0".to_string(),
+            chain_position: None,
+            confidence_score: 1.0,
+            proof_purpose: "test".to_string(),
+        };
+        // Need to reconstruct with the specific id
+        let mut proof = ContactProof::new(
+            NodeId::new(),
+            NodeId::new(),
+            window,
+            metadata,
+        );
+        proof.id = proof_id;
         proof
     }
 

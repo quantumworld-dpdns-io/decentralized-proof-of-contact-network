@@ -70,6 +70,10 @@ pub fn get_proofs_failed() -> u64 {
     PROOFS_FAILED.get()
 }
 
+pub fn get_proofs_rejected() -> u64 {
+    PROOFS_REJECTED.get()
+}
+
 pub fn get_active_proofs() -> i64 {
     ACTIVE_PROOFS.get()
 }
