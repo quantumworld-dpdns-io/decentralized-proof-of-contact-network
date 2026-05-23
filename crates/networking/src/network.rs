@@ -17,13 +17,13 @@ use crate::discovery::{
 use crate::error::NetworkError;
 use crate::gossip::GossipProtocol;
 use crate::message::{Envelope, NetworkMessage, PeerId, ProofOfContact};
-use crate::peer_store::{InMemoryPeerStore, PeerRecord, PeerReputation, PeerStore, PersistentPeerStore};
+use crate::peer_store::{InMemoryPeerStore, PeerRecord, PeerStore};
 use crate::protocol::{
     CompositeHandler, HandshakeHandler, ProofRelayHandler, ProofRequestHandler,
     ProofSubmissionHandler, SyncHandler,
 };
 use crate::rate_limit::RateLimiter;
-use crate::sync::{StateSync, SyncState};
+use crate::sync::StateSync;
 use crate::transport::{TcpTransport, Transport, TransportMessage};
 
 #[derive(Debug, Clone)]
