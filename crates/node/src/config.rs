@@ -1,24 +1,36 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageConfig {
-    #[serde(default = "default_storage_provider")]
-    pub provider: String,
-    #[serde(default)]
-    pub duckdb_path: Option<String>,
+#[serde(rename = "node")]
+pub struct NodeSection {
+    #[serde(default = "default_node_id")]
+    pub id: String,
+    #[serde(default = "default_data_dir")]
+    pub data_dir: String,
+    #[serde(default = "default_log_level")]
+    pub log_level: String,
 }
 
-impl Default for StorageConfig {
+impl Default for NodeSection {
     fn default() -> Self {
         Self {
-            provider: default_storage_provider(),
-            duckdb_path: None,
+            id: default_node_id(),
+            data_dir: default_data_dir(),
+            log_level: default_log_level(),
         }
     }
 }
 
-fn default_storage_provider() -> String {
-    "duckdb".to_string()
+fn default_node_id() -> String {
+    "poi-node".to_string()
+}
+
+fn default_data_dir() -> String {
+    "./data".to_string()
+}
+
+fn default_log_level() -> String {
+    "info".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +72,27 @@ fn default_handshake_timeout() -> u64 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageConfig {
+    #[serde(default = "default_storage_provider")]
+    pub provider: String,
+    #[serde(default)]
+    pub duckdb_path: Option<String>,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_storage_provider(),
+            duckdb_path: None,
+        }
+    }
+}
+
+fn default_storage_provider() -> String {
+    "duckdb".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservabilityConfig {
     #[serde(default)]
     pub otlp_endpoint: Option<String>,
@@ -79,32 +112,126 @@ impl Default for ObservabilityConfig {
     }
 }
 
-fn default_log_level() -> String {
-    "info".to_string()
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiConfig {
+    #[serde(default = "default_bind_addr")]
+    pub bind_addr: String,
+    #[serde(default)]
+    pub allowed_origins: Vec<String>,
+}
+
+impl Default for ApiConfig {
+    fn default() -> Self {
+        Self {
+            bind_addr: default_bind_addr(),
+            allowed_origins: Vec::new(),
+        }
+    }
+}
+
+fn default_bind_addr() -> String {
+    "0.0.0.0:3000".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiConfig {
+    #[serde(default = "default_ai_provider")]
+    pub provider: String,
+    #[serde(default)]
+    pub model: String,
+    #[serde(default)]
+    pub embedding_model: String,
+    #[serde(default)]
+    pub endpoint: String,
+}
+
+impl Default for AiConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_ai_provider(),
+            model: String::new(),
+            embedding_model: String::new(),
+            endpoint: String::new(),
+        }
+    }
+}
+
+fn default_ai_provider() -> String {
+    "ollama".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorStoreConfig {
+    #[serde(default = "default_vs_provider")]
+    pub provider: String,
+    #[serde(default)]
+    pub host: String,
+    #[serde(default = "default_vs_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub collection: String,
+}
+
+impl Default for VectorStoreConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_vs_provider(),
+            host: String::new(),
+            port: default_vs_port(),
+            collection: String::new(),
+        }
+    }
+}
+
+fn default_vs_provider() -> String {
+    "chroma".to_string()
+}
+
+fn default_vs_port() -> u16 {
+    8000
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyticsConfig {
+    #[serde(default)]
+    pub iceberg_warehouse: Option<String>,
+    #[serde(default)]
+    pub duckdb_path: Option<String>,
+}
+
+impl Default for AnalyticsConfig {
+    fn default() -> Self {
+        Self {
+            iceberg_warehouse: None,
+            duckdb_path: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeConfig {
-    pub core: poi_core::CoreConfig,
+    #[serde(rename = "node")]
+    pub node: NodeSection,
     pub network: NetworkConfig,
     pub storage: StorageConfig,
-    pub vector_store: poi_vector_store::VectorStoreConfig,
-    pub api: poi_api::ApiConfig,
-    pub ai: poi_ai::AiConfig,
-    pub analytics: poi_analytics::AnalyticsConfig,
+    #[serde(rename = "vector_store")]
+    pub vector_store: VectorStoreConfig,
+    pub api: ApiConfig,
+    pub ai: AiConfig,
+    pub analytics: AnalyticsConfig,
     pub observability: ObservabilityConfig,
 }
 
 impl Default for NodeConfig {
     fn default() -> Self {
         Self {
-            core: poi_core::CoreConfig::default(),
+            node: NodeSection::default(),
             network: NetworkConfig::default(),
             storage: StorageConfig::default(),
-            vector_store: poi_vector_store::VectorStoreConfig::default(),
-            api: poi_api::ApiConfig::default(),
-            ai: poi_ai::AiConfig::default(),
-            analytics: poi_analytics::AnalyticsConfig::default(),
+            vector_store: VectorStoreConfig::default(),
+            api: ApiConfig::default(),
+            ai: AiConfig::default(),
+            analytics: AnalyticsConfig::default(),
             observability: ObservabilityConfig::default(),
         }
     }
@@ -135,12 +262,11 @@ impl NodeConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::NodeConfig;
 
     #[test]
     fn test_config_default() {
         let config = NodeConfig::default();
-        assert_eq!(config.core.log_level, "info");
+        assert_eq!(config.node.log_level, "info");
         assert_eq!(config.network.listen_addr, "0.0.0.0:9090");
         assert_eq!(config.storage.provider, "duckdb");
         assert_eq!(config.observability.log_level, "info");
@@ -149,8 +275,8 @@ mod tests {
     #[test]
     fn test_config_from_toml() {
         let toml_str = r#"
-[core]
-node_id = "poi-test-node"
+[node]
+id = "poi-test-node"
 data_dir = "/tmp/data"
 log_level = "debug"
 
@@ -188,9 +314,9 @@ prometheus_port = 9091
 log_level = "debug"
 "#;
         let config: NodeConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.core.node_id.0, "poi-test-node");
-        assert_eq!(config.core.data_dir, "/tmp/data");
-        assert_eq!(config.core.log_level, "debug");
+        assert_eq!(config.node.id, "poi-test-node");
+        assert_eq!(config.node.data_dir, "/tmp/data");
+        assert_eq!(config.node.log_level, "debug");
         assert_eq!(config.network.listen_addr, "0.0.0.0:9091");
         assert_eq!(config.network.bootstrap_peers.len(), 1);
         assert_eq!(config.api.bind_addr, "0.0.0.0:3001");
@@ -201,6 +327,13 @@ log_level = "debug"
     fn test_config_from_file_not_found() {
         let err = NodeConfig::from_file("/nonexistent/config.toml");
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_node_section_default() {
+        let ns = NodeSection::default();
+        assert_eq!(ns.id, "poi-node");
+        assert_eq!(ns.data_dir, "./data");
     }
 
     #[test]
