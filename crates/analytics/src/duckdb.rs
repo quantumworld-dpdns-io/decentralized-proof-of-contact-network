@@ -1,7 +1,7 @@
 use duckdb::{AccessMode, Config, Connection};
-use poi_core::Proof;
+use poi_core::ContactProof;
 
-use crate::arrow::{proof_schema, ProofBatchBuilder};
+use crate::arrow::ProofBatchBuilder;
 use crate::Result;
 
 pub struct DuckDbEngine {
@@ -54,43 +54,6 @@ impl DuckDbEngine {
             .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))
     }
 
-    pub fn query(&self, sql: &str) -> Result<Vec<duckdb::RecordBatch>> {
-        tracing::debug!("DuckDB query: {}", sql);
-        let stmt = self
-            .conn
-            .prepare(sql)
-            .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
-        let mut results = Vec::new();
-        // use query_to_arrow for better integration
-        let _ = stmt;
-        Err(crate::AnalyticsError::DuckDb(
-            "Direct query returns rows, use query_arrow for batch results".to_string(),
-        ))
-    }
-
-    pub fn query_arrow(&self, sql: &str) -> Result<Vec<arrow::record_batch::RecordBatch>> {
-        tracing::debug!("DuckDB arrow query: {}", sql);
-        let _ = sql;
-        Err(crate::AnalyticsError::DuckDb(
-            "Arrow query requires arrow feature. Use query_batches instead.".to_string(),
-        ))
-    }
-
-    pub fn query_batches(&self, sql: &str) -> Result<Vec<duckdb::RecordBatch>> {
-        tracing::debug!("DuckDB batch query: {}", sql);
-        self.conn
-            .prepare(sql)
-            .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?
-            .query([])
-            .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))
-            .map(|rows| {
-                let mut batches = Vec::new();
-                // Iterate over rows to collect batches (simplified)
-                let _ = rows;
-                batches
-            })
-    }
-
     pub fn install_extension(&self, name: &str) -> Result<()> {
         let sql = format!("INSTALL '{}'", name);
         self.execute(&sql)?;
@@ -109,31 +72,29 @@ impl DuckDbEngine {
         Ok(())
     }
 
-    pub fn create_table_from_proofs(
-        &self,
-        table_name: &str,
-        proofs: &[Proof],
-    ) -> Result<()> {
+    pub fn create_table_from_proofs(&self, table_name: &str, proofs: &[ContactProof]) -> Result<()> {
         self.execute(&format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 id VARCHAR,
-                prover_id VARCHAR,
-                verifier_id VARCHAR,
+                proving_node VARCHAR,
+                target_node VARCHAR,
                 timestamp TIMESTAMP,
+                window_id VARCHAR,
                 verification_status VARCHAR,
                 confidence_score DOUBLE,
-                orbital_window VARCHAR,
-                signature VARCHAR,
-                metadata VARCHAR
+                protocol_version VARCHAR,
+                proof_purpose VARCHAR,
+                chain_position BIGINT,
+                signature VARCHAR
             )",
             table_name
         ))?;
 
-        let mut pbb = ProofBatchBuilder::with_capacity(proofs.len());
+        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
         for p in proofs {
-            pbb.add_proof(p);
+            builder.add_proof(p);
         }
-        let batch = pbb.finish()?;
+        let batch = builder.finish()?;
 
         let appender = self
             .conn
@@ -141,39 +102,55 @@ impl DuckDbEngine {
             .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
 
         for row_idx in 0..batch.num_rows() {
-            let id = batch.column(0)
+            let id = batch
+                .column(0)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast id column".to_string()))?
+                .ok_or_else(|| {
+                    crate::AnalyticsError::DuckDb("Failed to cast id column".to_string())
+                })?
                 .value(row_idx);
-            let prover = batch.column(1)
+            let proving = batch
+                .column(1)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast prover column".to_string()))?
+                .ok_or_else(|| {
+                    crate::AnalyticsError::DuckDb("Failed to cast proving column".to_string())
+                })?
                 .value(row_idx);
-            let verifier = batch.column(2)
+            let target = batch
+                .column(2)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast verifier column".to_string()))?
+                .ok_or_else(|| {
+                    crate::AnalyticsError::DuckDb("Failed to cast target column".to_string())
+                })?
                 .value(row_idx);
-            let status = batch.column(4)
+            let status = batch
+                .column(5)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast status column".to_string()))?
-                .value(row_idx);
-            let score = batch.column(5)
+                .map(|arr| arr.value(row_idx))
+                .unwrap_or("pending");
+            let score = batch
+                .column(6)
                 .as_any()
                 .downcast_ref::<arrow::array::Float64Array>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast score column".to_string()))?
+                .ok_or_else(|| {
+                    crate::AnalyticsError::DuckDb("Failed to cast score column".to_string())
+                })?
                 .value(row_idx);
-            let window = batch.column(6)
+            let window = batch
+                .column(4)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| crate::AnalyticsError::DuckDb("Failed to cast window column".to_string()))?
+                .ok_or_else(|| {
+                    crate::AnalyticsError::DuckDb("Failed to cast window column".to_string())
+                })?
                 .value(row_idx);
 
             appender
-                .append_row(duckdb::params![id, prover, verifier, status, score, window])
+                .append_row(duckdb::params![id, proving, target, status, score, window])
                 .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
         }
 
@@ -184,11 +161,7 @@ impl DuckDbEngine {
         Ok(())
     }
 
-    pub fn create_table_from_parquet(
-        &self,
-        table_name: &str,
-        parquet_path: &str,
-    ) -> Result<()> {
+    pub fn create_table_from_parquet(&self, table_name: &str, parquet_path: &str) -> Result<()> {
         let sql = format!(
             "CREATE OR REPLACE TABLE {} AS SELECT * FROM read_parquet('{}')",
             table_name, parquet_path
@@ -197,11 +170,7 @@ impl DuckDbEngine {
         Ok(())
     }
 
-    pub fn export_to_parquet(
-        &self,
-        query: &str,
-        output_path: &str,
-    ) -> Result<()> {
+    pub fn export_to_parquet(&self, query: &str, output_path: &str) -> Result<()> {
         let sql = format!("COPY ({}) TO '{}' (FORMAT PARQUET)", query, output_path);
         self.execute(&sql)?;
         Ok(())
@@ -218,44 +187,46 @@ impl Drop for DuckDbEngine {
 mod tests {
     use super::*;
     use chrono::TimeZone;
-    use poi_core::{NodeId, OrbitalWindowId, VerificationStatus};
+    use poi_core::{
+        NodeId, OrbitalWindow, ProofId, ProofMetadata, Signature, WindowType,
+    };
     use uuid::Uuid;
 
     #[test]
     fn test_in_memory() {
         let engine = DuckDbEngine::in_memory().unwrap();
-        let result = engine
-            .execute("CREATE TABLE test AS SELECT 1 AS x")
-            .unwrap();
+        let result = engine.execute("CREATE TABLE test AS SELECT 1 AS x").unwrap();
         assert_eq!(result, 1);
-    }
-
-    #[test]
-    fn test_execute_query() {
-        let engine = DuckDbEngine::in_memory().unwrap();
-        engine.execute("CREATE TABLE nums AS SELECT * FROM (VALUES (1), (2), (3)) t(n)").unwrap();
     }
 
     #[test]
     fn test_extension_loading() {
         let engine = DuckDbEngine::in_memory().unwrap();
         engine.install_and_load("parquet").unwrap();
-        engine.install_and_load("json").unwrap();
     }
 
     #[test]
     fn test_create_proof_table() {
         let engine = DuckDbEngine::in_memory().unwrap();
-        let proofs = vec![Proof {
-            id: Uuid::new_v4(),
-            prover_id: NodeId("node-a".to_string()),
-            verifier_id: NodeId("node-b".to_string()),
+        let proofs = vec![ContactProof {
+            id: ProofId(Uuid::new_v4()),
+            proving_node: NodeId("node-a".to_string()),
+            target_node: NodeId("node-b".to_string()),
+            orbital_window: OrbitalWindow {
+                id: Uuid::new_v4(),
+                start_time: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+                end_time: Utc.with_ymd_and_hms(2025, 1, 1, 1, 0, 0).unwrap(),
+                window_type: WindowType::Standard,
+            },
             timestamp: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
-            verification_status: VerificationStatus::Verified,
-            confidence_score: 0.95,
-            orbital_window: OrbitalWindowId("w1".to_string()),
-            signature: vec![],
-            metadata: serde_json::json!({}),
+            signature: Signature("sig".to_string()),
+            pqc_signature: None,
+            metadata: ProofMetadata {
+                protocol_version: "1.0".to_string(),
+                chain_position: None,
+                confidence_score: 0.95,
+                proof_purpose: "test".to_string(),
+            },
         }];
         engine.create_table_from_proofs("proofs", &proofs).unwrap();
     }
