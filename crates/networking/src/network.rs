@@ -9,7 +9,7 @@ use tokio::time;
 use tracing::{debug, info, trace, warn};
 
 use crate::config::NetworkConfig;
-use crate::connection::{ConnectionManager, ConnectionState, PooledConnection};
+use crate::connection::{ConnectionManager, PooledConnection};
 use crate::discovery::{
     BootstrapDiscovery, CompositeDiscovery, DhtDiscovery, MdnsDiscovery, PeerDiscovery,
     PeerExchange, PeerInfo,
