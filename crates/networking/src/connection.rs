@@ -5,10 +5,10 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 use crate::error::NetworkError;
-use crate::message::{Envelope, NetworkMessage, PeerId};
+use crate::message::PeerId;
 use crate::transport::{Connection as TransportConnection, Transport, TransportMessage};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

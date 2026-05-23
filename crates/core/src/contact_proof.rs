@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_contact_proof_new() {
-        let kp = KeyPair::generate();
+        let _kp = KeyPair::generate();
         let proof = ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         assert!(proof.signature.0.is_empty());
         assert!(proof.pqc_signature.is_none());
