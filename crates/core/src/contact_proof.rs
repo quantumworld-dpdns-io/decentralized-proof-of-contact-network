@@ -1,17 +1,15 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::Utc;
-use ed25519_dalek::{Signature as DalekSignature, VerifyingKey};
-use ed25519_dalek::Verifier;
+use ed25519_dalek::{Signature as DalekSignature, Verifier, VerifyingKey};
 
 use crate::error::{Error, Result};
 use crate::keypair::KeyPairExt;
 use crate::types::{
-    ContactProof, KeyPair, NodeId, OrbitalWindow, ProofId, ProofMetadata, PublicKey,
-    Signature,
+    ContactProof, KeyPair, NodeId, OrbitalWindow, ProofId, ProofMetadata, PublicKey, Signature,
 };
 
-pub trait ContactProofExt {
+pub trait ContactProofExt: Sized {
     fn new(
         proving_node: NodeId,
         target_node: NodeId,
@@ -23,8 +21,9 @@ pub trait ContactProofExt {
     fn pqc_sign(&mut self, keypair: &KeyPair) -> Result<()>;
     fn pqc_verify(&self, public_key: &PublicKey) -> Result<bool>;
     fn to_json(&self) -> String;
-    fn from_json(s: &str) -> Result<Self> where Self: Sized;
-    fn from_cbor(data: &[u8]) -> Result<Self> where Self: Sized;
+    fn from_json(s: &str) -> Result<Self>;
+    fn to_cbor(&self) -> Vec<u8>;
+    fn from_cbor(data: &[u8]) -> Result<Self>;
     fn is_valid(&self) -> Result<bool>;
     fn canonical_bytes(&self) -> Vec<u8>;
 }
@@ -181,18 +180,17 @@ mod tests {
     }
 
     fn test_window() -> OrbitalWindow {
-        OrbitalWindow::new(Utc::now(), Utc::now() + Duration::hours(1), WindowType::Standard)
+        OrbitalWindow::new(
+            Utc::now(),
+            Utc::now() + Duration::hours(1),
+            WindowType::Standard,
+        )
     }
 
     #[test]
     fn test_contact_proof_new() {
         let kp = KeyPair::generate();
-        let proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let proof = ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         assert!(proof.signature.0.is_empty());
         assert!(proof.pqc_signature.is_none());
         assert_eq!(proof.metadata.protocol_version, "1.0");
@@ -201,12 +199,8 @@ mod tests {
     #[test]
     fn test_sign_and_verify() {
         let kp = KeyPair::generate();
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         proof.sign(&kp);
         assert!(!proof.signature.0.is_empty());
         assert!(proof.verify(&kp.public).unwrap());
@@ -216,12 +210,8 @@ mod tests {
     fn test_verify_wrong_key() {
         let kp1 = KeyPair::generate();
         let kp2 = KeyPair::generate();
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         proof.sign(&kp1);
         assert!(!proof.verify(&kp2.public).unwrap());
     }
@@ -229,12 +219,8 @@ mod tests {
     #[test]
     fn test_json_roundtrip() {
         let kp = KeyPair::generate();
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         proof.sign(&kp);
         let json = proof.to_json();
         let deserialized = ContactProof::from_json(&json).unwrap();
@@ -246,12 +232,8 @@ mod tests {
     #[test]
     fn test_cbor_roundtrip() {
         let kp = KeyPair::generate();
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         proof.sign(&kp);
         let cbor = proof.to_cbor();
         let deserialized = ContactProof::from_cbor(&cbor).unwrap();
@@ -262,12 +244,8 @@ mod tests {
     #[test]
     fn test_is_valid_valid_proof() {
         let kp = KeyPair::generate();
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         proof.sign(&kp);
         assert!(proof.is_valid().unwrap());
     }
@@ -280,12 +258,8 @@ mod tests {
             Utc::now() - Duration::hours(1),
             WindowType::Standard,
         );
-        let mut proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            past_window,
-            test_metadata(),
-        );
+        let mut proof =
+            ContactProof::new(NodeId::new(), NodeId::new(), past_window, test_metadata());
         proof.sign(&kp);
         let result = proof.is_valid();
         assert!(matches!(result, Err(Error::WindowExpired)));
@@ -293,12 +267,7 @@ mod tests {
 
     #[test]
     fn test_is_valid_empty_signature() {
-        let proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let proof = ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         let result = proof.is_valid();
         assert!(matches!(result, Err(Error::InvalidSignature)));
     }
@@ -315,12 +284,7 @@ mod tests {
 
     #[test]
     fn test_canonical_bytes_deterministic() {
-        let proof = ContactProof::new(
-            NodeId::new(),
-            NodeId::new(),
-            test_window(),
-            test_metadata(),
-        );
+        let proof = ContactProof::new(NodeId::new(), NodeId::new(), test_window(), test_metadata());
         let b1 = proof.canonical_bytes();
         let b2 = proof.canonical_bytes();
         assert_eq!(b1, b2);
