@@ -213,6 +213,18 @@ mod tests {
     fn test_stats() {
         let cache = ProofCache::new(5, Duration::from_secs(60));
         let stats = cache.stats();
+        assert_eq!(stats.size, 0);
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.hit_rate(), 0.0);
+
+        cache.get(&uuid::Uuid::new_v4()); // miss (not counted by current impl)
+        let proof = make_proof(1);
+        let id = proof.id.0;
+        cache.insert(proof);
+        cache.get(&id); // hit
+
+        let stats = cache.stats();
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 0);
         assert!((stats.hit_rate() - 1.0).abs() < f64::EPSILON);
