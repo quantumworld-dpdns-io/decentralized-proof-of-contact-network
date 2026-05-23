@@ -3906,6 +3906,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
+ "futures",
  "poi-core",
  "poi-vector-store",
  "reqwest",
@@ -3915,6 +3917,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

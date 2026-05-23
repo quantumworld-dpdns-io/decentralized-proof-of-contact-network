@@ -68,7 +68,8 @@ class TestCreateProof:
         assert isinstance(proof, Proof)
         assert proof.id == "proof-1"
         assert route.called
-        assert route.calls[0].request.json() == {"target_node": "node-b", "window_id": "win-1", "purpose": "meetup"}
+        import json
+        assert json.loads(route.calls[0].request.content) == {"target_node": "node-b", "window_id": "win-1", "purpose": "meetup"}
 
 
 class TestGetProof:
@@ -134,7 +135,8 @@ class TestConnectPeer:
         route = mock_api.post("/api/v1/node/peers").respond(201, json=SAMPLE_PEER)
         peer = client.connect_peer("/ip4/1.2.3.4/tcp/9090")
         assert isinstance(peer, PeerInfo)
-        assert route.calls[0].request.json() == {"address": "/ip4/1.2.3.4/tcp/9090"}
+        import json
+        assert json.loads(route.calls[0].request.content) == {"address": "/ip4/1.2.3.4/tcp/9090"}
 
 
 class TestDisconnectPeer:
@@ -155,7 +157,8 @@ class TestWindows:
         route = mock_api.post("/api/v1/windows").respond(201, json=SAMPLE_WINDOW)
         win = client.create_window("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z", "extended")
         assert isinstance(win, OrbitalWindow)
-        assert route.calls[0].request.json() == {
+        import json
+        assert json.loads(route.calls[0].request.content) == {
             "start_time": "2026-01-01T00:00:00Z",
             "end_time": "2026-01-02T00:00:00Z",
             "window_type": "extended",
@@ -191,7 +194,8 @@ class TestAI:
         route = mock_api.post("/api/v1/ai/query").respond(200, json={"answer": "42"})
         answer = client.ai_query("life")
         assert answer == "42"
-        assert route.calls[0].request.json() == {"question": "life"}
+        import json
+        assert json.loads(route.calls[0].request.content) == {"question": "life"}
 
     def test_analyze_proof(self, client: PoiClient, mock_api: respx.MockRouter) -> None:
         mock_api.get("/api/v1/ai/analyze/proof-1").respond(200, json={"analysis": "ok"})
