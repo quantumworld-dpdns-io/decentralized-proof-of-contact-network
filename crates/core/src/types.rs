@@ -67,3 +67,42 @@ pub struct KeyPair {
     pub public: PublicKey,
     pub secret: SecretKey,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct PeerId(pub String);
+
+impl std::fmt::Display for PeerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum VerificationStatus {
+    Verified,
+    Failed,
+    Pending,
+    Expired,
+}
+
+impl VerificationStatus {
+    pub fn is_verified(&self) -> bool {
+        matches!(self, Self::Verified)
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Verified => "verified",
+            Self::Failed => "failed",
+            Self::Pending => "pending",
+            Self::Expired => "expired",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofChain {
+    pub id: Uuid,
+    pub proofs: Vec<ContactProof>,
+    pub depth: usize,
+}
