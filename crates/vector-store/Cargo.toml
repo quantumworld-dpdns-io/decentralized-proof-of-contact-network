@@ -6,7 +6,7 @@ description = "Vector database integration layer for proof-of-contact network"
 
 [dependencies]
 poi-core = { path = "../core" }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
