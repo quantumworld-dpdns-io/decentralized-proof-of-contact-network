@@ -262,20 +262,6 @@ mod tests {
     use mockito::Server;
     use poi_core::{NodeId, OrbitalWindow, ProofMetadata, WindowType};
 
-    fn test_server() -> (Server, ApiClient) {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let _enter = rt.enter();
-        // mockito's Server::new_async needs a Tokio runtime
-        let server = rt.block_on(async { Server::new_async().await });
-        let client = ApiClient::new(&server.url());
-        (server, client)
-    }
-
-    fn spawn_server() -> (mockito::ServerGuard, ApiClient) {
-        let (server, client) = test_server();
-        (server, client)
-    }
-
     #[tokio::test]
     async fn test_health_check() {
         let mut server = Server::new_async().await;

@@ -7,7 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tower_http::cors::CorsLayer;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::config::McpConfig;
 use crate::error::{JsonRpcErrorBody, McpError, Result};
@@ -54,7 +54,7 @@ impl McpResponse {
     }
 }
 
-pub(crate) struct ApiClient {
+pub struct ApiClient {
     http_client: reqwest::Client,
     api_url: String,
     api_key: Option<String>,

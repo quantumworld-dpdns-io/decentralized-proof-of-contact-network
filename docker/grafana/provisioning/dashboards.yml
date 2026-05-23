@@ -1,0 +1,14 @@
+# Grafana Dashboard Provisioning
+apiVersion: 1
+
+providers:
+  - name: "POI Network Dashboards"
+    orgId: 1
+    folder: "POI Network"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true

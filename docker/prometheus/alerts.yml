@@ -1,0 +1,208 @@
+# Alerting Rules for POI Network
+groups:
+  - name: poi-node-alerts
+    interval: 30s
+    rules:
+      # === Node Availability ===
+      - alert: NodeDown
+        expr: up{job="poi-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "POI Node {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.poi.network/runbooks/node-down"
+
+      - alert: NodeHighLatency
+        expr: poi_network_latency_ms > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network latency on {{ $labels.instance }}"
+          description: "Network latency is {{ $value }}ms to peer {{ $labels.peer_id }}."
+
+      - alert: NodeDisconnectedPeers
+        expr: poi_peers_connected_total < 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low peer count on {{ $labels.instance }}"
+          description: "Node {{ $labels.instance }} has only {{ $value }} connected peers."
+
+      # === Resource Usage ===
+      - alert: HighCPUUsage
+        expr: process_cpu_usage{job="poi-node"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} for more than 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="poi-node"} > 2e9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizeBytes }}."
+
+      - alert: DiskSpaceLow
+        expr: (sum by (instance) (rate(process_disk_writes_bytes_total[5m]))) > 1e8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O on {{ $labels.instance }}"
+          description: "Disk write rate is {{ $value | humanizeBytes }}/s."
+
+      # === Proof Operations ===
+      - alert: ProofCreationRateDrop
+        expr: rate(poi_proofs_created_total[5m]) < 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proof creation rate dropped on {{ $labels.instance }}"
+          description: "Proof creation rate is {{ $value }}/s, below threshold."
+
+      - alert: HighProofVerificationFailure
+        expr: rate(poi_proofs_verified_total{status="failed"}[5m]) / rate(poi_proofs_verified_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High proof verification failure rate on {{ $labels.instance }}"
+          description: "{{ $value | humanizePercentage }} of proof verifications are failing."
+
+      - alert: ProofLatencyHigh
+        expr: histogram_quantile(0.95, rate(poi_proof_creation_duration_ms_bucket[5m])) > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High proof creation latency on {{ $labels.instance }}"
+          description: "P95 proof creation latency is {{ $value }}ms."
+
+      # === DHT & Discovery ===
+      - alert: DHTRoutingTableLow
+        expr: poi_dht_peers_in_routing_table < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DHT routing table too small on {{ $labels.instance }}"
+          description: "Only {{ $value }} peers in routing table."
+
+      # === Storage ===
+      - alert: DatabaseGrowthRate
+        expr: rate(poi_storage_db_size_bytes[1h]) > 1e9
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "High database growth rate on {{ $labels.instance }}"
+          description: "Database growing at {{ $value | humanizeBytes }}/h."
+
+  - name: poi-security-alerts
+    interval: 30s
+    rules:
+      - alert: SecurityEventDetected
+        expr: rate(poi_security_events_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Security events detected on {{ $labels.instance }}"
+          description: "{{ $value }} security events per second detected."
+
+      - alert: HighAuthFailure
+        expr: rate(poi_auth_failures_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failure rate on {{ $labels.instance }}"
+          description: "{{ $value }} auth failures per second."
+
+      - alert: RateLimitingActive
+        expr: rate(poi_rate_limited_requests_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limiting active on {{ $labels.instance }}"
+          description: "{{ $value }} requests per second are being rate limited."
+
+      - alert: InvalidProofFlood
+        expr: rate(poi_invalid_proofs_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Invalid proof flood detected on {{ $labels.instance }}"
+          description: "{{ $value }} invalid proofs per second."
+
+      - alert: IdentityConflict
+        expr: poi_node_identity_conflicts_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Identity conflict detected"
+          description: "Node identity conflict detected on {{ $labels.instance }}."
+
+  - name: poi-ai-alerts
+    interval: 30s
+    rules:
+      - alert: AIProviderDown
+        expr: poi_ai_provider_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI provider is down on {{ $labels.instance }}"
+          description: "AI provider is unavailable."
+
+      - alert: AIHighLatency
+        expr: poi_ai_llm_latency_ms > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI latency on {{ $labels.instance }}"
+          description: "LLM latency is {{ $value }}ms (threshold: 10s)."
+
+      - alert: AIHighErrorRate
+        expr: rate(poi_ai_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI error rate on {{ $labels.instance }}"
+          description: "Error rate is {{ $value }}/s."
+
+  - name: poi-vector-store-alerts
+    interval: 30s
+    rules:
+      - alert: VectorStoreHighLatency
+        expr: poi_vector_store_query_duration_ms > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High vector store latency on {{ $labels.instance }}"
+          description: "Vector query latency is {{ $value }}ms."
+
+      - alert: VectorIndexCorruption
+        expr: poi_vector_store_index_size < 1000
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vector index potentially corrupted on {{ $labels.instance }}"
+          description: "Index size is {{ $value }}, below expected minimum."

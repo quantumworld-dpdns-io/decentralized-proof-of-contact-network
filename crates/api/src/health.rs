@@ -48,8 +48,8 @@ pub async fn health_check(State(state): State<AppState>) -> Json<serde_json::Val
 pub async fn version_info() -> Json<VersionResponse> {
     Json(VersionResponse {
         version: "0.1.0",
-        build: env!("PROFILE", "unknown"),
-        rustc: env!("CARGO_PKG_RUST_VERSION", "unknown"),
+        build: option_env!("PROFILE").unwrap_or("unknown"),
+        rustc: option_env!("CARGO_PKG_RUST_VERSION").unwrap_or("1.75"),
     })
 }
 

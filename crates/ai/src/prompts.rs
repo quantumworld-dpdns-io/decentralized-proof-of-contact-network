@@ -93,7 +93,7 @@ Provide a concise natural language summary."#,
 mod tests {
     use super::*;
     use poi_core::{ContactProof, ProofMetadata, NodeId, ProofId, OrbitalWindow, WindowType, Signature};
-    use chrono::{DateTime, Utc};
+    use chrono::DateTime;
     use uuid::Uuid;
 
     fn sample_proof() -> ContactProof {
