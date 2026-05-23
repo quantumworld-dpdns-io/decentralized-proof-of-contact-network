@@ -10,7 +10,7 @@ use tokio::sync::Mutex;
 
 use crate::message::PeerId;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrustLevel {
     Unknown,
     Low,
