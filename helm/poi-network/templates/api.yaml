@@ -1,0 +1,135 @@
+{{- if .Values.api.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "poi-network.fullname" . }}-api
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  strategy:
+    type: {{ .Values.api.strategy.type }}
+    rollingUpdate:
+      maxSurge: {{ .Values.api.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.api.strategy.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "poi-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+      {{- if .Values.monitoring.prometheusEnabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.api.ports.metrics | quote }}
+        prometheus.io/path: "/metrics"
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "poi-network.serviceAccountName" (dict "component" "api" "context" $) }}
+      securityContext:
+        fsGroup: {{ .Values.api.securityContext.fsGroup }}
+        runAsUser: {{ .Values.api.securityContext.runAsUser }}
+        runAsNonRoot: {{ .Values.api.securityContext.runAsNonRoot }}
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: {{ .Values.api.terminationGracePeriodSeconds }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            {{- toYaml .Values.api.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution | nindent 12 }}
+      containers:
+        - name: poi-api
+          image: {{ include "poi-network.image" (dict "image" .Values.api.image "global" .Values.global "chartVersion" .Chart.AppVersion) }}
+          imagePullPolicy: {{ include "poi-network.imagePullPolicy" (dict "image" .Values.api.image "global" .Values.global) }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.ports.http }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.api.ports.metrics }}
+              protocol: TCP
+          env:
+            {{- include "poi-network.env" (dict "env" .Values.api.env) | nindent 12 }}
+            - name: VECTOR_DB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "poi-network.fullname" $ }}-secrets
+                  key: VECTOR_DB_API_KEY
+                  optional: true
+            - name: AI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "poi-network.fullname" $ }}-secrets
+                  key: AI_API_KEY
+                  optional: true
+          envFrom:
+            - secretRef:
+                name: {{ include "poi-network.fullname" $ }}-secrets
+                optional: true
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsUser: {{ .Values.api.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.api.securityContext.runAsGroup }}
+          volumeMounts:
+            - name: config
+              mountPath: {{ .Values.config.mountPath }}
+              subPath: {{ .Values.config.subPath }}
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/poi/tls.crt
+              subPath: {{ .Values.secrets.tls.certPath }}
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/poi/tls.key
+              subPath: {{ .Values.secrets.tls.keyPath }}
+              readOnly: true
+          livenessProbe:
+            {{- include "poi-network.probe" (dict "port" .Values.api.ports.http "initialDelaySeconds" 15 "periodSeconds" 20) | nindent 12 }}
+          readinessProbe:
+            {{- include "poi-network.probe" (dict "port" .Values.api.ports.http "initialDelaySeconds" 5 "periodSeconds" 10 "failureThreshold" 2) | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "poi-network.fullname" . }}-config
+            items:
+              - key: config.toml
+                path: config.toml
+        - name: secrets
+          secret:
+            secretName: {{ include "poi-network.fullname" . }}-secrets
+            optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "poi-network.fullname" . }}-api
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: {{ .Values.api.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.api.service.port }}
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: {{ .Values.api.ports.metrics }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "poi-network.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+{{- end }}
