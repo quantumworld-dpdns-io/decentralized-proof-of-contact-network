@@ -1,28 +1,16 @@
-use serde::{Deserialize, Serialize};
+pub mod config;
+pub mod error;
+pub mod prompts;
+pub mod provider;
+pub mod providers;
+pub mod query;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AiConfig {
-    #[serde(default = "default_provider")]
-    pub provider: String,
-    #[serde(default)]
-    pub model: String,
-    #[serde(default)]
-    pub embedding_model: String,
-    #[serde(default)]
-    pub endpoint: String,
-}
-
-impl Default for AiConfig {
-    fn default() -> Self {
-        Self {
-            provider: default_provider(),
-            model: String::new(),
-            embedding_model: String::new(),
-            endpoint: String::new(),
-        }
-    }
-}
-
-fn default_provider() -> String {
-    "ollama".to_string()
-}
+pub use config::{AiConfig, AiProvider};
+pub use error::{AiError, Result};
+pub use provider::{
+    AiProvider as AiProviderTrait, ChatConfig, ChatMessage, ChatResponse, TokenUsage,
+};
+pub use providers::create_provider;
+pub use query::{
+    AnomalyReport, AnomalySeverity, NetworkStats, NlQueryEngine, NlQueryResult, ProofAnalysis,
+};

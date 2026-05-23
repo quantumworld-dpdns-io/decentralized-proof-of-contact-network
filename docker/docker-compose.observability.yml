@@ -1,0 +1,184 @@
+# Observability Stack for POI Network
+# Adds advanced monitoring, logging, and alerting
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml up -d
+
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # === Loki (Log Aggregation) ===
+  loki:
+    image: grafana/loki:latest
+    container_name: poi-loki
+    ports:
+      - "3100:3100"
+    networks:
+      - poi-network
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    command:
+      - "--config.file=/etc/loki/loki-config.yml"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Promtail (Log Collector) ===
+  promtail:
+    image: grafana/promtail:latest
+    container_name: poi-promtail
+    networks:
+      - poi-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    command:
+      - "--config.file=/etc/promtail/promtail-config.yml"
+    depends_on:
+      - loki
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Tempo (Distributed Tracing) ===
+  tempo:
+    image: grafana/tempo:latest
+    container_name: poi-tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9411:9411"   # Zipkin
+    networks:
+      - poi-network
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - tempo-data:/tmp/tempo
+    command:
+      - "--config.file=/etc/tempo/tempo-config.yml"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Grafana (Enhanced with Loki/Tempo datasources) ===
+  grafana:
+    image: grafana/grafana:latest
+    container_name: poi-grafana-observability
+    ports:
+      - "3001:3000"
+    networks:
+      - poi-network
+    volumes:
+      - grafana-obs-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources-obs:/etc/grafana/provisioning/datasources:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel, grafana-lokiexplore-app
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Prometheus Alertmanager ===
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: poi-alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - poi-network
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "http://localhost:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Node Exporter (Host Metrics) ===
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: poi-node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - poi-network
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === cAdvisor (Container Metrics) ===
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: poi-cadvisor
+    ports:
+      - "8082:8080"
+    networks:
+      - poi-network
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Vector (Log Aggregator Alternative) ===
+  vector:
+    image: timberio/vector:latest-alpine
+    container_name: poi-vector
+    networks:
+      - poi-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./vector/vector.toml:/etc/vector/vector.toml:ro
+    command:
+      - "--config"
+      - "/etc/vector/vector.toml"
+    logging: *default-logging
+    restart: unless-stopped
+
+volumes:
+  loki-data:
+  tempo-data:
+  grafana-obs-data:
+  alertmanager-data:
+
+networks:
+  poi-network:
+    external: true

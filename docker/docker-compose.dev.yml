@@ -1,0 +1,137 @@
+# Development Docker Compose - extends the main compose file with dev tools
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up -d
+
+version: "3.9"
+
+services:
+  # === Development Utilities ===
+
+  # Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: poi-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - poi-network
+    depends_on:
+      - duckdb
+    restart: unless-stopped
+
+  # MinIO S3-compatible storage (for Iceberg/Warehouse)
+  minio:
+    image: minio/minio:latest
+    container_name: poi-minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    networks:
+      - poi-network
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Create default buckets on startup
+  minio-setup:
+    image: minio/mc:latest
+    container_name: poi-minio-setup
+    networks:
+      - poi-network
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/poi-analytics --ignore-existing;
+      mc policy set public myminio/poi-analytics;
+      echo 'MinIO buckets created';
+      exit 0;
+      "
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: poi-jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - poi-network
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    restart: unless-stopped
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: poi-otel-collector
+    ports:
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+      - "8888:8888"  # Prometheus metrics
+      - "8889:8889"  # Prometheus exporter
+    networks:
+      - poi-network
+    volumes:
+      - ./otel-collector.yml:/etc/otel-collector.yml:ro
+    command:
+      - "--config=/etc/otel-collector.yml"
+    restart: unless-stopped
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: poi-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - poi-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Watchtower for auto-updates (dev only)
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: poi-watchtower
+    networks:
+      - poi-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      --interval 300
+      --cleanup
+      --label-enable
+    restart: unless-stopped
+
+  # API documentation viewer
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: poi-swagger
+    ports:
+      - "8081:8080"
+    networks:
+      - poi-network
+    environment:
+      API_URL: http://poi-node-1:3000/api-docs/openapi.json
+      SWAGGER_JSON_URL: http://poi-node-1:3000/api-docs/openapi.json
+    restart: unless-stopped
+
+networks:
+  poi-network:
+    external: true

@@ -1,0 +1,16 @@
+{
+  "name": "decentralized-proof-of-contact-network",
+  "description": "Decentralized proof-of-contact network with orbital windows",
+  "subagents": [
+    "proof-developer",
+    "security-auditor",
+    "test-writer",
+    "architecture-reviewer"
+  ],
+  "mcpServers": {
+    "poi-network": {
+      "command": "poi-mcp-server",
+      "args": ["--api-url", "http://localhost:3000"]
+    }
+  }
+}
