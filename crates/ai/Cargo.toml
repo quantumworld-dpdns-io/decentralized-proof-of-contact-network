@@ -7,7 +7,7 @@ description = "AI/ML integration for decentralized proof-of-contact network"
 [dependencies]
 poi-core = { path = "../core" }
 poi-vector-store = { path = "../vector-store" }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
