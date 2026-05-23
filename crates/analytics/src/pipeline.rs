@@ -78,8 +78,11 @@ impl AnalyticsPipeline {
     pub async fn run_export(&self, proofs: &[Proof], output_path: &str) -> Result<()> {
         self.set_status(PipelineStage::Export).await;
 
-        let batch = ProofBatchBuilder::with_capacity(proofs.len())
-            .finish_and_write_parquet_inline(proofs)?;
+        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
+        for proof in proofs {
+            builder.add_proof(proof);
+        }
+        let batch = builder.finish()?;
 
         let file = std::fs::File::create(output_path)?;
         let writer =
