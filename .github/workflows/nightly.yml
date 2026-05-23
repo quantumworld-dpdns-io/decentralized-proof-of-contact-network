@@ -1,0 +1,250 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # Every day at 02:00 UTC
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  integration-tests:
+    name: Long-Running Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker images
+        run: |
+          docker compose -f docker/docker-compose.yml build
+          docker compose -f docker/docker-compose.analytics.yml build
+          docker compose -f docker/docker-compose.observability.yml build
+      - name: Start full stack
+        run: |
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.analytics.yml -f docker/docker-compose.observability.yml up -d --wait
+        env:
+          COMPOSE_PROFILES: nightly
+      - name: Wait for all services
+        run: |
+          services=(
+            "http://localhost:3000/health"
+            "http://localhost:9091/metrics"
+            "http://localhost:9092/health"
+          )
+          for url in "${services[@]}"; do
+            for i in $(seq 1 60); do
+              if curl -sf "$url" > /dev/null 2>&1; then
+                echo "$url is ready"
+                break
+              fi
+              sleep 5
+            done
+          done
+      - name: Run full integration suite
+        run: |
+          cargo test --workspace -- --ignored --test-threads=8 --nocapture
+        env:
+          POI_NODE_URL: http://localhost:3000
+          POI_API_KEY: nightly-test-key
+          RUST_LOG: debug
+          RUST_BACKTRACE: full
+        timeout-minutes: 60
+      - name: Run Robot Framework full suite
+        run: |
+          pip install robotframework robotframework-requests
+          make test-robot-all
+        continue-on-error: true
+        env:
+          NODE_URL: http://localhost:3000
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p nightly-logs
+          docker compose -f docker/docker-compose.yml logs --timestamps > nightly-logs/docker-compose.log
+          docker compose -f docker/docker-compose.analytics.yml logs --timestamps > nightly-logs/analytics.log
+          docker compose -f docker/docker-compose.observability.yml logs --timestamps > nightly-logs/observability.log
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-integration-logs
+          path: nightly-logs/
+          retention-days: 14
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.yml down -v
+          docker compose -f docker/docker-compose.analytics.yml down -v
+          docker compose -f docker/docker-compose.observability.yml down -v
+
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Build with benchmarks
+        run: cargo build --workspace --release
+      - name: Install benchmark tools
+        run: cargo install hyperfine
+      - name: Run criterion benchmarks
+        run: cargo bench --workspace -- --output-format bencher 2>/dev/null || true
+        continue-on-error: true
+      - name: Start node for load testing
+        run: |
+          cargo run -p poi-node -- --config config.dev.toml &
+          sleep 5
+          echo "Node started for benchmarks"
+        timeout-minutes: 2
+      - name: Run API benchmarks with hyperfine
+        run: |
+          hyperfine \
+            --warmup 3 \
+            --min-runs 10 \
+            --export-json benchmark-results.json \
+            "curl -s http://localhost:3000/health" \
+            "curl -s http://localhost:3000/api/v1/metrics"
+        continue-on-error: true
+      - name: Run load test with locust
+        run: |
+          pip install locust
+          locust -f tests/locust/locustfile.py --headless -u 100 -r 10 --run-time 5m --host http://localhost:3000 --html locust-report.html 2>/dev/null || true
+        continue-on-error: true
+      - name: Store benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmarks
+          path: |
+            benchmark-results.json
+            locust-report.html
+            target/criterion/
+          retention-days: 60
+      - name: Compare with baseline
+        run: |
+          if [ -f benchmark-results.json ]; then
+            echo "## Performance Benchmarks" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Test | Mean (s) | Min (s) | Max (s) |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|----------|---------|---------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '.results[] | "| \(.command) | \(.mean) | \(.min) | \(.max) |"' benchmark-results.json >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: Kill background processes
+        if: always()
+        run: pkill -f "poi-node" || true
+
+  fuzz-testing:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+      - name: Build fuzz targets
+        run: |
+          for crate in crates/*/; do
+            name=$(basename "$crate")
+            if [ -d "$crate/fuzz" ]; then
+              echo "Building fuzz targets for $name"
+              cargo fuzz build -p "poi-$name" 2>/dev/null || true
+            fi
+          done
+        continue-on-error: true
+      - name: Run fuzz tests
+        run: |
+          for crate in crates/*/; do
+            name=$(basename "$crate")
+            if [ -d "$crate/fuzz" ]; then
+              echo "Fuzzing $name..."
+              cargo fuzz run -p "poi-$name" fuzz_target_1 -- -max_total_time=300 2>/dev/null || true
+            fi
+          done
+        continue-on-error: true
+      - name: Check for crashes
+        run: |
+          CRASHES=$(find . -path "*/fuzz/artifacts" -type d 2>/dev/null)
+          if [ -n "$CRASHES" ]; then
+            echo "⚠️ Fuzzing found crashes in:" >> $GITHUB_STEP_SUMMARY
+            for dir in $CRASHES; do
+              count=$(find "$dir" -type f | wc -l)
+              echo "- $dir: $count artifacts" >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "✅ No crashes found during fuzzing" >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: Upload fuzz artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: "**/fuzz/artifacts/"
+          retention-days: 30
+
+  cross-compilation:
+    name: Cross-Compilation Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - wasm32-wasi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Install cross
+        run: cargo install cross
+      - name: Cross-compile
+        run: cross build --workspace --release --target ${{ matrix.target }}
+        continue-on-error: true
+
+  report:
+    name: Nightly Report
+    if: always()
+    needs:
+      - integration-tests
+      - performance-benchmarks
+      - fuzz-testing
+      - cross-compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate nightly build report
+        run: |
+          echo "# Nightly Build Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Benchmarks | ${{ needs.performance-benchmarks.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fuzz Testing | ${{ needs.fuzz-testing.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cross-Compilation | ${{ needs.cross-compilation.result }} |" >> $GITHUB_STEP_SUMMARY

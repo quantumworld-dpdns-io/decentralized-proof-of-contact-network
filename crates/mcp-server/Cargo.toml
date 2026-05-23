@@ -1,0 +1,22 @@
+[package]
+name = "poi-mcp-server"
+version = "0.1.0"
+edition = "2021"
+description = "MCP server for AI agent integration with proof-of-contact network"
+
+[dependencies]
+poi-core = { path = "../core" }
+poi-api-client = { path = "../api-client" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
+reqwest = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }

@@ -1,0 +1,122 @@
+# Analytics Stack for POI Network
+# Adds Trino, Iceberg, and analytics tooling
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.analytics.yml up -d
+
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # === Trino (Distributed SQL Query Engine) ===
+  trino-coordinator:
+    image: trinodb/trino:latest
+    container_name: poi-trino-coordinator
+    ports:
+      - "8080:8080"  # HTTP API
+    networks:
+      - poi-network
+    volumes:
+      - ./trino/catalog:/etc/trino/catalog:ro
+      - ./trino/config.properties:/etc/trino/config.properties:ro
+    command:
+      - "--coordinator"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    restart: unless-stopped
+
+  trino-worker:
+    image: trinodb/trino:latest
+    container_name: poi-trino-worker
+    networks:
+      - poi-network
+    volumes:
+      - ./trino/catalog:/etc/trino/catalog:ro
+      - ./trino/config.properties:/etc/trino/config.properties:ro
+    command:
+      - "--worker"
+    depends_on:
+      - trino-coordinator
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Apache Iceberg REST Catalog ===
+  iceberg-rest:
+    image: tabulario/iceberg-rest:latest
+    container_name: poi-iceberg-rest
+    ports:
+      - "8181:8181"
+    networks:
+      - poi-network
+    environment:
+      CATALOG_WAREHOUSE: s3://poi-analytics/iceberg/
+      CATALOG_IO__IMPL: org.apache.iceberg.io.ResolvingFileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      CATALOG_S3_ACCESS__KEY: minioadmin
+      CATALOG_S3_SECRET__KEY: minioadmin
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+    depends_on:
+      - minio
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Spark (for ETL jobs) ===
+  spark:
+    image: bitnami/spark:latest
+    container_name: poi-spark
+    ports:
+      - "4040:4040"  # Spark UI
+    networks:
+      - poi-network
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_URL: spark://spark:7077
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+    logging: *default-logging
+    restart: unless-stopped
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: poi-spark-worker
+    networks:
+      - poi-network
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark:7077
+      SPARK_WORKER_MEMORY: 4G
+      SPARK_WORKER_CORES: 2
+    depends_on:
+      - spark
+    logging: *default-logging
+    restart: unless-stopped
+
+  # === Jupyter (for data analysis) ===
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: poi-jupyter
+    ports:
+      - "8888:8888"
+    networks:
+      - poi-network
+    volumes:
+      - ../notebooks:/home/jovyan/work
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      GRANT_SUDO: "yes"
+    logging: *default-logging
+    restart: unless-stopped
+
+networks:
+  poi-network:
+    external: true

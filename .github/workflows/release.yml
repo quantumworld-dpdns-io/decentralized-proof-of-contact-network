@@ -1,0 +1,272 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (leave blank to use tag)"
+        required: false
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version tag
+        run: |
+          TAG="${{ github.ref_name }}"
+          if ! echo "$TAG" | grep -P '^v\d+\.\d+\.\d+(-[\w.]+)?$'; then
+            echo "Invalid version tag: $TAG"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Check changelog exists
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            echo "Changelog found"
+          else
+            echo "Warning: No CHANGELOG.md found"
+          fi
+      - name: Verify Cargo.toml version
+        run: |
+          WORKSPACE_VERSION=$(grep '^version =' Cargo.toml | head -1 | cut -d'"' -f2)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$WORKSPACE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Warning: Cargo.toml version ($WORKSPACE_VERSION) != tag version ($TAG_VERSION)"
+          fi
+
+  build-binaries:
+    name: Build Binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: ""
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            suffix: ""
+            use-cross: true
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            suffix: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Install cross-compilation tools
+        if: matrix.use-cross
+        run: cargo install cross
+      - name: Build release binaries
+        run: |
+          if [ "${{ matrix.use-cross }}" = "true" ]; then
+            cross build --workspace --release --target ${{ matrix.target }}
+          else
+            cargo build --workspace --release --target ${{ matrix.target }}
+          fi
+      - name: Package binaries
+        run: |
+          mkdir -p dist
+          BINARIES="poi-node poi-api poi-cli poi-mcp-server"
+          for bin in $BINARIES; do
+            path="target/${{ matrix.target }}/release/$bin"
+            if [ -f "$path" ]; then
+              archive="${bin}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+              tar czf "dist/$archive" -C "target/${{ matrix.target }}/release" "$bin"
+            fi
+          done
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.target }}
+          path: dist/
+          retention-days: 7
+
+  build-docker:
+    name: Build Docker Images
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: poi-node
+            dockerfile: docker/node.Dockerfile
+          - name: poi-api
+            dockerfile: docker/api.Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Publish crates (workspace order)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATES="poi-core poi-networking poi-vector-store poi-analytics poi-api poi-api-client poi-cli poi-mcp-server poi-ai poi-node"
+          for crate in $CRATES; do
+            if [ -f "crates/$crate/Cargo.toml" ]; then
+              echo "Publishing $crate..."
+              cargo publish -p "$crate" --no-verify || echo "Failed to publish $crate, continuing"
+            fi
+          done
+        continue-on-error: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install maturin twine
+      - name: Build and publish
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          maturin build --release --out dist
+          twine upload dist/*
+        continue-on-error: true
+
+  publish-npm:
+    name: Publish to npm
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Build and publish dashboard
+        working-directory: dashboard
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run build 2>/dev/null || true
+            npm publish --access public 2>/dev/null || echo "npm publish skipped"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true
+
+  create-release:
+    name: Create GitHub Release
+    needs:
+      - validate
+      - build-binaries
+      - build-docker
+      - publish-crates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Extract changes for this version from CHANGELOG.md
+            VERSION="${GITHUB_REF_NAME#v}"
+            CHANGES=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+            echo "changes<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changes=Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          NOTES="# Release ${{ github.ref_name }}
+          ${{ steps.changelog.outputs.changes }}
+
+          ## Docker Images
+          - \`ghcr.io/${{ github.repository }}/poi-node:${{ github.ref_name }}\`
+          - \`ghcr.io/${{ github.repository }}/poi-api:${{ github.ref_name }}\`
+
+          ## Downloads
+          "
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: artifacts/**/*
+          generate_release_notes: false

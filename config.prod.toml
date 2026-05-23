@@ -1,0 +1,46 @@
+# Production configuration for poi-node
+[node]
+id = "${NODE_ID}"
+data_dir = "/var/lib/poi"
+log_level = "info"
+
+[network]
+listen_addr = "0.0.0.0:9090"
+external_addr = "${EXTERNAL_ADDR}"
+bootstrap_peers = [
+    "bootstrap1.poi.network:9090",
+    "bootstrap2.poi.network:9090",
+    "bootstrap3.poi.network:9090",
+]
+
+[storage]
+provider = "duckdb"
+duckdb_path = "/var/lib/poi/proofs.duckdb"
+
+[vector_store]
+provider = "${VECTOR_DB_PROVIDER}"
+host = "${VECTOR_DB_HOST}"
+port = ${VECTOR_DB_PORT}
+collection = "poi-proofs"
+api_key = "${VECTOR_DB_API_KEY}"
+
+[api]
+bind_addr = "0.0.0.0:3000"
+allowed_origins = ["${DASHBOARD_URL}"]
+tls_cert = "/etc/poi/tls.crt"
+tls_key = "/etc/poi/tls.key"
+
+[ai]
+provider = "${AI_PROVIDER}"
+model = "${AI_MODEL}"
+embedding_model = "${EMBEDDING_MODEL}"
+endpoint = "${AI_ENDPOINT}"
+api_key = "${AI_API_KEY}"
+
+[analytics]
+iceberg_warehouse = "s3://poi-analytics/iceberg"
+duckdb_path = "/var/lib/poi/analytics.duckdb"
+
+[observability]
+otlp_endpoint = "${OTLP_ENDPOINT}"
+prometheus_port = 9091

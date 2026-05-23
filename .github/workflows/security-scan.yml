@@ -1,0 +1,187 @@
+name: Weekly Security Scan
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run audit
+        run: cargo audit --json > audit-results.json
+        continue-on-error: true
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-audit-report
+          path: audit-results.json
+          retention-days: 30
+
+  cargo-deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+      - name: Run deny check
+        run: cargo deny check --format json > deny-results.json
+        continue-on-error: true
+      - name: Run license check
+        run: cargo deny check licenses --format json > deny-licenses.json
+        continue-on-error: true
+      - name: Upload deny results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-deny-report
+          path: deny-*.json
+          retention-days: 30
+
+  trivy-scan:
+    name: Trivy Filesystem Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs.sarif
+          retention-days: 30
+
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run npm audit
+        working-directory: dashboard
+        run: |
+          if [ -f package.json ]; then
+            npm ci --ignore-scripts
+            npm audit --json > npm-audit-results.json 2>/dev/null || true
+          else
+            echo '{"error": "No package.json found"}' > npm-audit-results.json
+          fi
+        continue-on-error: true
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: dashboard/npm-audit-results.json
+          retention-days: 30
+
+  pip-audit:
+    name: Pip Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run pip audit
+        run: |
+          pip install pip-audit
+          pip-audit --json > pip-audit-results.json 2>/dev/null || true
+        continue-on-error: true
+      - name: Upload pip audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-results.json
+          retention-days: 30
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+      - name: TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ""
+          extra_args: --results=verified,unknown --json
+        continue-on-error: true
+
+  summary:
+    name: Generate Security Summary
+    needs:
+      - cargo-audit
+      - cargo-deny
+      - trivy-scan
+      - npm-audit
+      - pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports
+      - name: Generate summary
+        run: |
+          echo "## Weekly Security Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scan Date: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          for dir in reports/*/; do
+            scan_name=$(basename "$dir")
+            files=$(find "$dir" -type f 2>/dev/null | wc -l)
+            echo "| $scan_name | Completed ($files files) |" >> $GITHUB_STEP_SUMMARY
+          done
+      - name: Upload combined report
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-security-report
+          path: reports/
+          retention-days: 60

@@ -1,0 +1,47 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/networking",
+    "crates/node",
+    "crates/vector-store",
+    "crates/analytics",
+    "crates/api",
+    "crates/api-client",
+    "crates/cli",
+    "crates/mcp-server",
+    "crates/ai",
+]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+opentelemetry = "0.26"
+opentelemetry-prometheus = "0.17"
+prometheus = "0.13"
+opentelemetry_sdk = "0.26"
+reqwest = { version = "0.12", features = ["json"] }
+clap = { version = "4", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+ed25519-dalek = { version = "=2.1.1", features = ["serde", "rand_core"] }
+rand = "0.8"
+hex = "0.4"
+base64 = "0.22"
+prost = "0.13"
+tonic = "0.12"
+axum = { version = "0.7", features = ["ws"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "limit"] }
+utoipa = { version = "4", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+async-trait = "0.1"
+futures = "0.3"
+bytes = "1"
+blake3 = "1"
+zeroize = { version = "1", features = ["derive"] }

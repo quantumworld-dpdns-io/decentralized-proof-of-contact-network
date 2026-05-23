@@ -1,0 +1,2 @@
+[console_scripts]
+poi = poi.__main__:main

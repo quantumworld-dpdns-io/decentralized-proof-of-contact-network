@@ -1,0 +1,99 @@
+# Prometheus Configuration for POI Network
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: "poi-network"
+    namespace: "default"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+      timeout: 5s
+      api_version: v2
+
+# Rule files
+rule_files:
+  - "/etc/prometheus/alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # POI Node metrics
+  - job_name: "poi-node"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "poi-node-1:9091"
+          - "poi-node-2:9091"
+          - "poi-node-3:9091"
+        labels:
+          service: "poi-node"
+
+  # POI API metrics
+  - job_name: "poi-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "poi-node-1:9091"
+        labels:
+          service: "poi-api"
+
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+  # Node Exporter (host-level metrics)
+  - job_name: "node-exporter"
+    static_configs:
+      - targets:
+          - "node-exporter:9100"
+
+  # cAdvisor (container metrics)
+  - job_name: "cadvisor"
+    static_configs:
+      - targets:
+          - "cadvisor:8080"
+
+  # Grafana
+  - job_name: "grafana"
+    static_configs:
+      - targets:
+          - "grafana:3000"
+
+  # OpenTelemetry Collector
+  - job_name: "otel-collector"
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - "otel-collector:8888"
+          - "otel-collector:8889"
+
+  # Vector DB metrics
+  - job_name: "chromadb"
+    static_configs:
+      - targets:
+          - "chromadb:8000"
+    metrics_path: "/api/v1/metrics"
+    scrape_interval: 30s
+
+  - job_name: "qdrant"
+    static_configs:
+      - targets:
+          - "qdrant:6334"
+    metrics_path: "/metrics"
+    scrape_interval: 30s
+
+  # Ollama metrics
+  - job_name: "ollama"
+    static_configs:
+      - targets:
+          - "ollama:11434"
+    metrics_path: "/api/metrics"
+    scrape_interval: 30s
