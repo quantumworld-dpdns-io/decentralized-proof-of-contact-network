@@ -179,6 +179,7 @@ async fn process_proof_lifecycle(item: &ProofItem) -> Result<(), String> {
 mod tests {
     use super::*;
     use chrono::{Duration, Utc};
+    use poi_core::{NodeId, OrbitalWindow, ProofMetadata, WindowType};
 
     fn make_proof() -> ContactProof {
         let window = OrbitalWindow::new(
