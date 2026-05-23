@@ -26,7 +26,7 @@ impl ChromaDB {
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         if let Some(ref key) = self.api_key {
             headers.insert(
-                "X-Api-Key".parse().unwrap(),
+                HeaderName::from_static("x-api-key"),
                 HeaderValue::from_str(key).unwrap(),
             );
         }
