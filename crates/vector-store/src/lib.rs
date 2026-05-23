@@ -1,32 +1,25 @@
-use serde::{Deserialize, Serialize};
+pub mod config;
+pub mod embedding;
+pub mod error;
+pub mod factory;
+pub mod traits;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VectorStoreConfig {
-    #[serde(default = "default_provider")]
-    pub provider: String,
-    #[serde(default)]
-    pub host: String,
-    #[serde(default = "default_port")]
-    pub port: u16,
-    #[serde(default)]
-    pub collection: String,
-}
+#[cfg(feature = "chroma")]
+pub mod chroma;
 
-impl Default for VectorStoreConfig {
-    fn default() -> Self {
-        Self {
-            provider: default_provider(),
-            host: String::new(),
-            port: default_port(),
-            collection: String::new(),
-        }
-    }
-}
+#[cfg(feature = "qdrant")]
+pub mod qdrant;
 
-fn default_provider() -> String {
-    "chroma".to_string()
-}
+#[cfg(feature = "weaviate")]
+pub mod weaviate;
 
-fn default_port() -> u16 {
-    8000
-}
+#[cfg(feature = "lancedb")]
+pub mod lancedb;
+
+#[cfg(feature = "milvus")]
+pub mod milvus;
+
+pub use config::{VectorStoreConfig, VectorStoreProvider};
+pub use error::VectorStoreError;
+pub use factory::create_vector_store;
+pub use traits::{Filter, FilterCondition, SearchResult, VectorStore};
