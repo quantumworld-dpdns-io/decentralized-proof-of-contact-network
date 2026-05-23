@@ -79,11 +79,10 @@ impl NetworkManager {
                 use rustls::ServerConfig;
                 use std::sync::Arc as StdArc;
 
-                let cert = generate_self_signed_cert()?;
+                let (certs, key) = generate_self_signed_cert()?;
                 let server_config = ServerConfig::builder()
-                    .with_safe_defaults()
                     .with_no_client_auth()
-                    .with_single_cert(cert.0, cert.1)
+                    .with_single_cert(certs, key)
                     .map_err(|e| NetworkError::TlsError(e.to_string()))?;
                 Arc::new(TlsTransport::new(
                     config.listen_addr,
