@@ -238,8 +238,10 @@ mod tests {
     #[test]
     fn test_verify_timestamp_excessive_drift() {
         let kp = KeyPair::generate();
-        let proof = test_proof(&kp);
-        let result = verify_timestamp(&proof, Duration::from_secs(1));
+        let mut proof = test_proof(&kp);
+        // Set the timestamp to 10 minutes ago to cause excessive drift
+        proof.timestamp = Utc::now() - ChronoDuration::minutes(10);
+        let result = verify_timestamp(&proof, Duration::from_secs(60));
         assert!(result.is_err());
     }
 
