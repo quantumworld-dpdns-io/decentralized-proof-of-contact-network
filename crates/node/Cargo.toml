@@ -6,7 +6,6 @@ description = "Node runtime for decentralized proof-of-contact network"
 
 [dependencies]
 poi-core = { path = "../core" }
-poi-networking = { path = "../networking" }
 poi-vector-store = { path = "../vector-store" }
 poi-analytics = { path = "../analytics" }
 poi-api = { path = "../api" }
