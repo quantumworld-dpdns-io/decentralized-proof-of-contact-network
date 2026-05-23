@@ -247,15 +247,16 @@ impl NodeConfig {
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("toml");
-        match ext {
-            "toml" => toml::from_str(&content),
+        let result = match ext {
+            "toml" => toml::from_str(&content)
+                .map_err(|e| crate::ConfigError::ParseError(e.to_string())),
             "yaml" | "yml" => serde_yaml::from_str(&content)
                 .map_err(|e| crate::ConfigError::ParseError(e.to_string())),
             "json" => serde_json::from_str(&content)
                 .map_err(|e| crate::ConfigError::ParseError(e.to_string())),
             other => Err(crate::ConfigError::UnsupportedFormat(other.to_string())),
-        }
-        .map_err(|e| crate::ConfigError::ParseError(e.to_string()))
+        };
+        result
     }
 }
 
