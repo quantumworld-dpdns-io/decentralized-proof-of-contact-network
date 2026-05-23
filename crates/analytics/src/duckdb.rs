@@ -75,85 +75,35 @@ impl DuckDbEngine {
                 id VARCHAR,
                 proving_node VARCHAR,
                 target_node VARCHAR,
-                timestamp TIMESTAMP,
+                timestamp VARCHAR,
                 window_id VARCHAR,
                 verification_status VARCHAR,
                 confidence_score DOUBLE,
                 protocol_version VARCHAR,
                 proof_purpose VARCHAR,
-                chain_position BIGINT,
                 signature VARCHAR
             )",
             table_name
         ))?;
 
-        let mut builder = ProofBatchBuilder::with_capacity(proofs.len());
         for p in proofs {
-            builder.add_proof(p);
+            let timestamp_str = p.timestamp.to_rfc3339();
+            let status = if p.signature.0.is_empty() { "pending" } else if p.metadata.confidence_score >= 0.5 { "verified" } else { "failed" };
+            self.execute(&format!(
+                "INSERT INTO {} VALUES ('{}', '{}', '{}', '{}', '{}', '{}', {}, '{}', '{}', '{}')",
+                table_name,
+                p.id.0,
+                p.proving_node.0,
+                p.target_node.0,
+                timestamp_str,
+                p.orbital_window.id,
+                status,
+                p.metadata.confidence_score,
+                p.metadata.protocol_version,
+                p.metadata.proof_purpose,
+                p.signature.0,
+            ))?;
         }
-        let batch = builder.finish()?;
-
-        let mut appender = self
-            .conn
-            .appender(table_name)
-            .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
-
-        for row_idx in 0..batch.num_rows() {
-            let id = batch
-                .column(0)
-                .as_any()
-                .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| {
-                    crate::AnalyticsError::DuckDb("Failed to cast id column".to_string())
-                })?
-                .value(row_idx);
-            let proving = batch
-                .column(1)
-                .as_any()
-                .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| {
-                    crate::AnalyticsError::DuckDb("Failed to cast proving column".to_string())
-                })?
-                .value(row_idx);
-            let target = batch
-                .column(2)
-                .as_any()
-                .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| {
-                    crate::AnalyticsError::DuckDb("Failed to cast target column".to_string())
-                })?
-                .value(row_idx);
-            let status = batch
-                .column(5)
-                .as_any()
-                .downcast_ref::<arrow::array::StringArray>()
-                .map(|arr| arr.value(row_idx))
-                .unwrap_or("pending");
-            let score = batch
-                .column(6)
-                .as_any()
-                .downcast_ref::<arrow::array::Float64Array>()
-                .ok_or_else(|| {
-                    crate::AnalyticsError::DuckDb("Failed to cast score column".to_string())
-                })?
-                .value(row_idx);
-            let window = batch
-                .column(4)
-                .as_any()
-                .downcast_ref::<arrow::array::StringArray>()
-                .ok_or_else(|| {
-                    crate::AnalyticsError::DuckDb("Failed to cast window column".to_string())
-                })?
-                .value(row_idx);
-
-            appender
-                .append_row(duckdb::params![id, proving, target, status, score, window])
-                .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
-        }
-
-        appender
-            .flush()
-            .map_err(|e| crate::AnalyticsError::DuckDb(e.to_string()))?;
 
         Ok(())
     }
