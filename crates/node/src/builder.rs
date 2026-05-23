@@ -50,14 +50,14 @@ impl NodeBuilder {
         } else {
             RuntimeManager::with_workers(4)
         };
-        runtime.start()?;
+        runtime.start().map_err(NodeError::Runtime)?;
 
         let telemetry =
             init_telemetry(&self.config.observability, &runtime)
                 .map_err(|e| NodeError::Startup(StartupError::RuntimeInit(e.to_string())))?;
 
         let state_path =
-            std::path::PathBuf::from(&self.config.core.data_dir).join("node_state.json");
+            std::path::PathBuf::from(&self.config.node.data_dir).join("node_state.json");
         let state = StateManager::with_persistence(state_path);
 
         let cache = ProofCache::new(1000, Duration::from_secs(3600));
@@ -169,7 +169,7 @@ mod tests {
         let builder = NodeBuilder::new();
         let node = builder.build().unwrap();
         assert_eq!(node.state.current(), NodeState::Init);
-        assert_eq!(node.config.core.node_id, "poi-node");
+        assert_eq!(node.config.node.id, "poi-node");
     }
 
     #[test]
@@ -207,7 +207,7 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         let toml_str = r#"
 [node]
-id = "custom-node"
+id = "poi-custom-node"
 data_dir = "./data"
 log_level = "debug"
 
@@ -238,10 +238,9 @@ endpoint = "http://localhost:11434"
 log_level = "debug"
 "#;
         std::fs::write(&config_path, toml_str).unwrap();
-
         let builder = NodeBuilder::with_config(config_path.to_str().unwrap()).unwrap();
         let node = builder.build().unwrap();
-        assert_eq!(node.config.core.node_id, "custom-node");
+        assert_eq!(node.config.node.id, "poi-custom-node");
     }
 
     #[test]
