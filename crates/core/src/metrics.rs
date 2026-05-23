@@ -105,7 +105,7 @@ impl ProofMetrics {
             proofs_created: get_proofs_created(),
             proofs_verified: get_proofs_verified(),
             proofs_failed: get_proofs_failed(),
-            proofs_rejected: PROOFS_REJECTED.get(),
+            proofs_rejected: get_proofs_rejected(),
             active_proofs: get_active_proofs(),
             chain_length: CHAIN_LENGTH.get(),
         }
