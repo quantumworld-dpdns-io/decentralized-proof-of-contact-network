@@ -98,7 +98,7 @@ fn compute_merkle_root(hashes: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::ProofChain;
     use crate::contact_proof::ContactProofExt;
     use crate::keypair::KeyPairExt;
     use crate::types::*;
