@@ -9,7 +9,7 @@ use tracing::{debug, info, trace, warn};
 
 use crate::error::NetworkError;
 use crate::message::PeerId;
-use crate::transport::{Connection as TransportConnection, Transport, TransportMessage};
+use crate::transport::Transport;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
