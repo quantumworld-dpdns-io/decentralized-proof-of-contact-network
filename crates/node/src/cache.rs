@@ -222,9 +222,12 @@ mod tests {
         let proof = make_proof(1);
         let id = proof.id.0;
         cache.insert(proof);
-        cache.get(&id); // hit
+        let hit_result = cache.get(&id); // hit
+        println!("hit_result: {:?}", hit_result.is_some());
+        println!("proof id: {:?}", id);
 
         let stats = cache.stats();
+        println!("hits: {}, misses: {}, size: {}", stats.hits, stats.misses, stats.size);
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 1);
         assert!((stats.hit_rate() - 0.5).abs() < f64::EPSILON);
