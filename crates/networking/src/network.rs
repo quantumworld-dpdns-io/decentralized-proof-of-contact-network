@@ -7,6 +7,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
 use tokio::sync::{broadcast, Mutex};
 use tokio::time;
 use tracing::{debug, info, trace, warn};
+use uuid::Uuid;
 
 use crate::config::NetworkConfig;
 use crate::connection::{ConnectionManager, PooledConnection};
