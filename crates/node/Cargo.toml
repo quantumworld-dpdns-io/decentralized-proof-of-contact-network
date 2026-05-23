@@ -29,4 +29,4 @@ opentelemetry_sdk = { workspace = true }
 prometheus = { workspace = true }
 axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors", "trace", "limit"] }
-toml = "0.5"
+toml = "0.8"
