@@ -66,28 +66,21 @@ impl AnalyticsPipeline {
     }
 
     pub async fn status(&self) -> PipelineStatus {
-        self.status.lock().await.clone()
+        let s = self.status.lock().await;
+        s.clone()
     }
 
     pub async fn metrics(&self) -> PipelineMetrics {
-        self.metrics.lock().await.clone()
-    }
-}
-
-impl Clone for PipelineMetrics {
-    fn clone(&self) -> Self {
-        Self {
-            proofs_exported: self.proofs_exported,
-            proofs_synced: self.proofs_synced,
-            files_compacted: self.files_compacted,
-            queries_executed: self.queries_executed,
-            start_time: self.start_time,
-            end_time: self.end_time,
+        let m = self.metrics.lock().await;
+        PipelineMetrics {
+            proofs_exported: m.proofs_exported,
+            proofs_synced: m.proofs_synced,
+            files_compacted: m.files_compacted,
+            queries_executed: m.queries_executed,
+            start_time: m.start_time,
+            end_time: m.end_time,
         }
     }
-}
-
-impl AnalyticsPipeline {
 
     pub async fn run_export(&self, proofs: &[ContactProof], output_path: &str) -> Result<()> {
         *self.status.lock().await = PipelineStatus::Running(PipelineStage::Export);
