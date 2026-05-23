@@ -161,7 +161,7 @@ impl GossipProtocol {
         self.pending_queue.lock().await.len()
     }
 
-    async fn compute_message_id(&self, data: &[u8]) -> [u8; 32] {
+    fn compute_message_id(&self, data: &[u8]) -> [u8; 32] {
         use sha2::{Sha256, Digest};
         let mut hasher = Sha256::new();
         hasher.update(data);
