@@ -1,6 +1,7 @@
 use sha2::Digest;
 use uuid::Uuid;
 
+use crate::contact_proof::ContactProofExt;
 use crate::types::{ContactProof, ProofId};
 
 pub fn hash_blake3(data: &[u8]) -> String {

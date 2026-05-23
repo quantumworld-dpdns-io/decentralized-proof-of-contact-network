@@ -4,6 +4,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::Utc;
 use ed25519_dalek::{Signature as DalekSignature, VerifyingKey};
+use ed25519_dalek::Verifier;
 
 use crate::contact_proof::ContactProofExt;
 use crate::error::{Error, Result};
@@ -98,8 +99,7 @@ pub fn verify_signature(proof: &ContactProof, public_key: &PublicKey) -> Result<
         .map_err(|_| Error::InvalidSignature)?
         .try_into()
         .map_err(|_| Error::InvalidSignature)?;
-    let dalek_sig =
-        DalekSignature::from_bytes(&sig_bytes).map_err(|e| Error::CryptoError(e.to_string()))?;
+    let dalek_sig = DalekSignature::from_bytes(&sig_bytes);
     Ok(verifying_key.verify(&data, &dalek_sig).is_ok())
 }
 
