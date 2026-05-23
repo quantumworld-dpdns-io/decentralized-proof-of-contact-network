@@ -192,7 +192,9 @@ mod tests {
     #[test]
     fn test_in_memory() {
         let engine = DuckDbEngine::in_memory().unwrap();
-        let result = engine.execute("CREATE TABLE test AS SELECT 1 AS x").unwrap();
+        let result = engine.execute("CREATE TABLE test (x INTEGER)");
+        assert!(result.is_ok());
+        let result = engine.execute("INSERT INTO test VALUES (1)").unwrap();
         assert_eq!(result, 1);
     }
 
