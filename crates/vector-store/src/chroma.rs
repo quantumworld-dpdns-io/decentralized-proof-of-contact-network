@@ -1,7 +1,7 @@
 use crate::error::VectorStoreError;
 use crate::traits::{Filter, FilterCondition, SearchResult, VectorStore};
 use async_trait::async_trait;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE};
 use serde_json::Value;
 
 pub type Result<T> = std::result::Result<T, VectorStoreError>;
