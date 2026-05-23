@@ -23,7 +23,7 @@ zeroize = { workspace = true }
 prost = { workspace = true }
 bytes = { workspace = true }
 async-trait = { workspace = true }
-sha2 = "0.10"
+sha2 = "0.11"
 ciborium = "0.2"
 prometheus = { workspace = true }
 
