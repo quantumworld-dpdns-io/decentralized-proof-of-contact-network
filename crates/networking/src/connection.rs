@@ -207,8 +207,7 @@ impl ConnectionManager {
                     if conn.state == ConnectionState::Reconnecting {
                         let delay = base_delay
                             * (2u32.pow(conn.reconnect_count.min(6)))
-                            .min(max_delay.as_secs() as u32);
-                        let delay = Duration::from_secs(delay as u64);
+                            .min(max_delay.as_secs() as u32) as u32;
                         debug!(
                             "Reconnecting to {} in {:?} (attempt {})",
                             peer_id, delay, conn.reconnect_count
