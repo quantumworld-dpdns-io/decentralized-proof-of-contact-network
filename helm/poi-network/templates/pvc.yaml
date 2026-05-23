@@ -1,0 +1,59 @@
+{{- if and .Values.node.enabled .Values.node.persistence.enabled (not .Values.node.persistence.storageClass) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "poi-network.fullname" . }}-node-data
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node
+spec:
+  accessModes:
+    {{- toYaml .Values.node.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.node.persistence.size }}
+  storageClassName: ""
+{{- end }}
+
+{{- if .Values.storage.storageClasses.standard.create }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storage.storageClasses.standard.name }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+provisioner: {{ .Values.storage.storageClasses.standard.provisioner }}
+parameters:
+  type: {{ .Values.storage.storageClasses.standard.type }}
+  iops: {{ .Values.storage.storageClasses.standard.iops | quote }}
+  throughput: {{ .Values.storage.storageClasses.standard.throughput | quote }}
+  encrypted: "true"
+  fsType: ext4
+reclaimPolicy: {{ .Values.storage.storageClasses.standard.reclaimPolicy }}
+allowVolumeExpansion: {{ .Values.storage.storageClasses.standard.allowVolumeExpansion }}
+volumeBindingMode: {{ .Values.storage.storageClasses.standard.volumeBindingMode }}
+{{- end }}
+
+{{- if .Values.storage.storageClasses.fast.create }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storage.storageClasses.fast.name }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+provisioner: {{ .Values.storage.storageClasses.fast.provisioner }}
+parameters:
+  type: {{ .Values.storage.storageClasses.fast.type }}
+  iops: {{ .Values.storage.storageClasses.fast.iops | quote }}
+  throughput: {{ .Values.storage.storageClasses.fast.throughput | quote }}
+  encrypted: "true"
+  fsType: ext4
+reclaimPolicy: {{ .Values.storage.storageClasses.fast.reclaimPolicy }}
+allowVolumeExpansion: {{ .Values.storage.storageClasses.fast.allowVolumeExpansion }}
+volumeBindingMode: {{ .Values.storage.storageClasses.fast.volumeBindingMode }}
+{{- end }}

@@ -210,7 +210,7 @@ impl IcebergEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
+    use chrono::{TimeZone, Utc};
     use poi_core::{
         NodeId, OrbitalWindow, ProofId, ProofMetadata, Signature, WindowType,
     };

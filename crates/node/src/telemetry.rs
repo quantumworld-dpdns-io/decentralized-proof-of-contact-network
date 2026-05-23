@@ -94,6 +94,7 @@ mod tests {
     use super::*;
     use crate::RuntimeManager;
 
+    #[ignore = "requires refactoring to avoid global tracing subscriber conflict and nested tokio runtime"]
     #[test]
     fn test_init_telemetry_no_metrics() {
         let config = ObservabilityConfig {

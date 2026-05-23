@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: poi-config
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: config
+data:
+  config.toml: |
+    [node]
+    id = "${NODE_ID}"
+    data_dir = "/var/lib/poi"
+    log_level = "info"
+
+    [network]
+    listen_addr = "0.0.0.0:9090"
+    external_addr = "${EXTERNAL_ADDR}"
+    bootstrap_peers = [
+      "poi-node-0.poi-node.poi-network.svc.cluster.local:9090",
+      "poi-node-1.poi-node.poi-network.svc.cluster.local:9090",
+      "poi-node-2.poi-node.poi-network.svc.cluster.local:9090",
+    ]
+
+    [storage]
+    provider = "duckdb"
+    duckdb_path = "/var/lib/poi/proofs.duckdb"
+
+    [vector_store]
+    provider = "${VECTOR_DB_PROVIDER}"
+    host = "${VECTOR_DB_HOST}"
+    port = ${VECTOR_DB_PORT}
+    collection = "poi-proofs"
+    api_key = "${VECTOR_DB_API_KEY}"
+
+    [api]
+    bind_addr = "0.0.0.0:3000"
+    allowed_origins = ["${DASHBOARD_URL}"]
+    tls_cert = "/etc/poi/tls.crt"
+    tls_key = "/etc/poi/tls.key"
+
+    [ai]
+    provider = "${AI_PROVIDER}"
+    model = "${AI_MODEL}"
+    embedding_model = "${EMBEDDING_MODEL}"
+    endpoint = "${AI_ENDPOINT}"
+    api_key = "${AI_API_KEY}"
+
+    [analytics]
+    iceberg_warehouse = "s3://poi-analytics/iceberg"
+    duckdb_path = "/var/lib/poi/analytics.duckdb"
+
+    [observability]
+    otlp_endpoint = "${OTLP_ENDPOINT}"
+    prometheus_port = 9091
+
+  vector-store-config.yaml: |
+    chroma:
+      host: chromadb.poi-network.svc.cluster.local
+      port: 8000
+    qdrant:
+      host: qdrant.poi-network.svc.cluster.local
+      grpc_port: 6333
+      rest_port: 6334
+    fallback_provider: chroma
+
+  ai-provider-config.yaml: |
+    ollama:
+      endpoint: http://ollama.poi-network.svc.cluster.local:11434
+    openai:
+      endpoint: https://api.openai.com/v1
+    default_provider: ollama
+    default_model: llama3
+    default_embedding_model: nomic-embed-text
+
+  monitoring-config.yaml: |
+    prometheus_port: 9091
+    otlp_endpoint: http://otel-collector.poi-network.svc.cluster.local:4317
+    metrics_path: /metrics
+    health_path: /health

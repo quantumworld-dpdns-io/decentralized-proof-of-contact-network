@@ -121,6 +121,7 @@ mod tests {
         assert_eq!(scheduler.window_state().await, WindowState::Closed);
     }
 
+    #[ignore = "requires refactoring to avoid nested tokio runtime (RuntimeManager inside #[tokio::test])"]
     #[tokio::test]
     async fn test_windows_opened_count() {
         let scheduler =

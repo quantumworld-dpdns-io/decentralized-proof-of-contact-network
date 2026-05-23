@@ -1,0 +1,107 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "poi-network.fullname" . }}-mcp-server
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: {{ .Values.mcpServer.replicas }}
+  strategy:
+    type: {{ .Values.mcpServer.strategy.type }}
+    rollingUpdate:
+      maxSurge: {{ .Values.mcpServer.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.mcpServer.strategy.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        {{- include "poi-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp-server
+      {{- if .Values.monitoring.prometheusEnabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.mcpServer.ports.metrics | quote }}
+        prometheus.io/path: "/metrics"
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "poi-network.serviceAccountName" (dict "component" "mcpServer" "context" $) }}
+      securityContext:
+        fsGroup: {{ .Values.mcpServer.securityContext.fsGroup }}
+        runAsUser: {{ .Values.mcpServer.securityContext.runAsUser }}
+        runAsNonRoot: {{ .Values.mcpServer.securityContext.runAsNonRoot }}
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: {{ .Values.mcpServer.terminationGracePeriodSeconds }}
+      containers:
+        - name: mcp-server
+          image: {{ include "poi-network.image" (dict "image" .Values.mcpServer.image "global" .Values.global "chartVersion" .Chart.AppVersion) }}
+          imagePullPolicy: {{ include "poi-network.imagePullPolicy" (dict "image" .Values.mcpServer.image "global" .Values.global) }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.mcpServer.ports.http }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.mcpServer.ports.metrics }}
+              protocol: TCP
+          env:
+            {{- include "poi-network.env" (dict "env" .Values.mcpServer.env) | nindent 12 }}
+            - name: VECTOR_DB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "poi-network.fullname" $ }}-secrets
+                  key: VECTOR_DB_API_KEY
+                  optional: true
+            - name: AI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "poi-network.fullname" $ }}-secrets
+                  key: AI_API_KEY
+                  optional: true
+          envFrom:
+            - secretRef:
+                name: {{ include "poi-network.fullname" $ }}-secrets
+                optional: true
+          resources:
+            {{- toYaml .Values.mcpServer.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsUser: {{ .Values.mcpServer.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.mcpServer.securityContext.runAsGroup }}
+          livenessProbe:
+            {{- include "poi-network.probe" (dict "port" .Values.mcpServer.ports.http "initialDelaySeconds" 15 "periodSeconds" 20) | nindent 12 }}
+          readinessProbe:
+            {{- include "poi-network.probe" (dict "port" .Values.mcpServer.ports.http "initialDelaySeconds" 5 "periodSeconds" 10 "failureThreshold" 2) | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "poi-network.fullname" . }}-mcp-server
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  type: {{ .Values.mcpServer.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.mcpServer.service.port }}
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: {{ .Values.mcpServer.ports.metrics }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "poi-network.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+{{- end }}

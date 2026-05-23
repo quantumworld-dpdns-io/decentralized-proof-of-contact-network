@@ -1,0 +1,335 @@
+# Global settings
+global:
+  environment: staging
+  domainName: poi.network
+  imageRegistry: ghcr.io/quantumworld-dpdns-io/decentralized-proof-of-contact-network
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+
+# Namespace configuration
+namespace:
+  name: poi-network
+  create: true
+
+# POI Node StatefulSet configuration
+node:
+  enabled: true
+  replicas: 3
+  image:
+    repository: poi-node
+    tag: latest
+    pullPolicy: ""
+  serviceName: poi-node
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    maxUnavailable: 1
+  terminationGracePeriodSeconds: 60
+  ports:
+    api: 3000
+    p2p: 9090
+    metrics: 9091
+  env:
+    NODE_ID: ""
+    EXTERNAL_ADDR: ""
+    VECTOR_DB_PROVIDER: chroma
+    VECTOR_DB_HOST: chromadb.poi-network.svc.cluster.local:8000
+    VECTOR_DB_PORT: 8000
+    AI_PROVIDER: ollama
+    AI_MODEL: llama3
+    EMBEDDING_MODEL: nomic-embed-text
+    AI_ENDPOINT: http://ollama.poi-network.svc.cluster.local:11434
+    DASHBOARD_URL: https://dashboard.poi.network
+    OTLP_ENDPOINT: http://otel-collector.poi-network.svc.cluster.local:4317
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: poi-standard
+    accessModes:
+      - ReadWriteOnce
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          topologyKey: kubernetes.io/hostname
+    podAntiAffinityRequired: true
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+
+# API server Deployment configuration
+api:
+  enabled: true
+  replicas: 2
+  image:
+    repository: poi-api
+    tag: latest
+    pullPolicy: ""
+  strategy:
+    type: RollingUpdate
+    maxSurge: 1
+    maxUnavailable: 0
+  terminationGracePeriodSeconds: 30
+  ports:
+    http: 3000
+    metrics: 9091
+  env:
+    VECTOR_DB_HOST: chromadb.poi-network.svc.cluster.local:8000
+    VECTOR_DB_PORT: 8000
+    VECTOR_DB_PROVIDER: chroma
+    AI_ENDPOINT: http://ollama.poi-network.svc.cluster.local:11434
+    AI_PROVIDER: ollama
+    AI_MODEL: llama3
+    EMBEDDING_MODEL: nomic-embed-text
+    OTLP_ENDPOINT: http://otel-collector.poi-network.svc.cluster.local:4317
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+  service:
+    type: ClusterIP
+    port: 80
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          topologyKey: kubernetes.io/hostname
+
+# Dashboard Deployment configuration
+dashboard:
+  enabled: true
+  replicas: 2
+  image:
+    repository: dashboard
+    tag: latest
+    pullPolicy: ""
+  strategy:
+    type: RollingUpdate
+    maxSurge: 1
+    maxUnavailable: 0
+  terminationGracePeriodSeconds: 30
+  port: 3000
+  env:
+    NEXT_PUBLIC_API_URL: https://api.poi.network
+    NEXT_PUBLIC_WS_URL: wss://api.poi.network/ws
+    NODE_ENV: production
+    PORT: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  securityContext:
+    runAsUser: 1001
+    runAsGroup: 1001
+    fsGroup: 1001
+    runAsNonRoot: true
+  service:
+    type: ClusterIP
+    port: 80
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# MCP Server Deployment configuration
+mcpServer:
+  enabled: true
+  replicas: 2
+  image:
+    repository: poi-mcp-server
+    tag: latest
+    pullPolicy: ""
+  strategy:
+    type: RollingUpdate
+    maxSurge: 1
+    maxUnavailable: 0
+  terminationGracePeriodSeconds: 30
+  ports:
+    http: 3002
+    metrics: 9091
+  env:
+    MCP_PORT: 3002
+    POI_API_URL: http://poi-api.poi-network.svc.cluster.local:80
+    VECTOR_DB_HOST: chromadb.poi-network.svc.cluster.local:8000
+    VECTOR_DB_PORT: 8000
+    AI_ENDPOINT: http://ollama.poi-network.svc.cluster.local:11434
+    AI_PROVIDER: ollama
+    AI_MODEL: llama3
+    EMBEDDING_MODEL: nomic-embed-text
+    OTLP_ENDPOINT: http://otel-collector.poi-network.svc.cluster.local:4317
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+  service:
+    type: ClusterIP
+    port: 80
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ConfigMap settings
+config:
+  mountPath: /etc/poi/config.toml
+  subPath: config.toml
+
+# Secrets settings
+secrets:
+  create: true
+  mountPath: /etc/poi
+  tls:
+    certPath: tls.crt
+    keyPath: tls.key
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+  hosts:
+    api: api.poi.network
+    dashboard: dashboard.poi.network
+    mcp: mcp.poi.network
+    root: poi.network
+  tls:
+    - hosts:
+        - api.poi.network
+        - dashboard.poi.network
+        - mcp.poi.network
+      secretName: poi-tls
+  clusterIssuer:
+    enabled: true
+    name: letsencrypt-prod
+    email: admin@poi.network
+    server: https://acme-v02.api.letsencrypt.org/directory
+
+# Storage configuration
+storage:
+  storageClasses:
+    standard:
+      create: true
+      name: poi-standard
+      provisioner: ebs.csi.eks.amazonaws.com
+      type: gp3
+      iops: 3000
+      throughput: 125
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      volumeBindingMode: WaitForFirstConsumer
+    fast:
+      create: true
+      name: poi-fast
+      provisioner: ebs.csi.eks.amazonaws.com
+      type: gp3
+      iops: 16000
+      throughput: 1000
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      volumeBindingMode: WaitForFirstConsumer
+
+# Network policies
+networkPolicies:
+  enabled: true
+
+# ServiceAccount configuration
+serviceAccounts:
+  node:
+    create: true
+    name: poi-node
+    annotations: {}
+  api:
+    create: true
+    name: poi-api
+    annotations: {}
+  dashboard:
+    create: true
+    name: poi-dashboard
+    annotations: {}
+  mcpServer:
+    create: true
+    name: poi-mcp-server
+    annotations: {}
+
+# Monitoring and observability
+monitoring:
+  prometheusEnabled: true
+  grafanaEnabled: true
+  otelCollectorEnabled: true
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+
+# Global resource defaults
+globalResources:
+  defaultRequests:
+    cpu: 100m
+    memory: 128Mi
+  defaultLimits:
+    cpu: 500m
+    memory: 512Mi

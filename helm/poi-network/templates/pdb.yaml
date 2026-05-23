@@ -1,0 +1,71 @@
+{{- if .Values.node.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "poi-network.fullname" . }}-node-pdb
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node
+spec:
+  minAvailable: {{ .Values.node.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: node
+{{- end }}
+
+{{- if .Values.api.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "poi-network.fullname" . }}-api-pdb
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: {{ .Values.api.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}
+
+{{- if .Values.dashboard.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "poi-network.fullname" . }}-dashboard-pdb
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+spec:
+  minAvailable: {{ .Values.dashboard.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: dashboard
+{{- end }}
+
+{{- if .Values.mcpServer.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "poi-network.fullname" . }}-mcp-server-pdb
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  minAvailable: {{ .Values.mcpServer.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "poi-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp-server
+{{- end }}

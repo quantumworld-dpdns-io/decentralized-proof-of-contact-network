@@ -1,0 +1,218 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: poi-node
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: node
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  serviceName: poi-node
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: node
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: poi-network
+        app.kubernetes.io/component: node
+        app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: poi-node
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/component
+                      operator: In
+                      values:
+                        - node
+                topologyKey: kubernetes.io/hostname
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/component
+                      operator: In
+                      values:
+                        - node
+                topologyKey: topology.kubernetes.io/zone
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - node
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+      containers:
+        - name: poi-node
+          image: ghcr.io/quantumworld-dpdns-io/decentralized-proof-of-contact-network/poi-node:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: api
+              containerPort: 3000
+              protocol: TCP
+            - name: p2p
+              containerPort: 9090
+              protocol: TCP
+            - name: metrics
+              containerPort: 9091
+              protocol: TCP
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: EXTERNAL_ADDR
+              value: "$(NODE_ID).poi-node.poi-network.svc.cluster.local:9090"
+            - name: VECTOR_DB_PROVIDER
+              value: "chroma"
+            - name: VECTOR_DB_HOST
+              value: "chromadb.poi-network.svc.cluster.local:8000"
+            - name: VECTOR_DB_PORT
+              value: "8000"
+            - name: VECTOR_DB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: poi-secrets
+                  key: VECTOR_DB_API_KEY
+                  optional: true
+            - name: AI_PROVIDER
+              value: "ollama"
+            - name: AI_MODEL
+              value: "llama3"
+            - name: EMBEDDING_MODEL
+              value: "nomic-embed-text"
+            - name: AI_ENDPOINT
+              value: "http://ollama.poi-network.svc.cluster.local:11434"
+            - name: AI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: poi-secrets
+                  key: AI_API_KEY
+                  optional: true
+            - name: DASHBOARD_URL
+              value: "https://dashboard.poi.network"
+            - name: OTLP_ENDPOINT
+              value: "http://otel-collector.poi-network.svc.cluster.local:4317"
+            - name: RUST_LOG
+              value: "info"
+          envFrom:
+            - secretRef:
+                name: poi-secrets
+                optional: true
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/poi
+            - name: config
+              mountPath: /etc/poi/config.toml
+              subPath: config.toml
+            - name: secrets
+              mountPath: /etc/poi/tls.crt
+              subPath: tls.crt
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/poi/tls.key
+              subPath: tls.key
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+      volumes:
+        - name: config
+          configMap:
+            name: poi-config
+            items:
+              - key: config.toml
+                path: config.toml
+        - name: secrets
+          secret:
+            secretName: poi-secrets
+            optional: true
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/name: poi-network
+          app.kubernetes.io/component: node
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: poi-standard
+        resources:
+          requests:
+            storage: 50Gi

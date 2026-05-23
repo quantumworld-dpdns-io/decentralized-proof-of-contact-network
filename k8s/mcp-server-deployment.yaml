@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poi-mcp-server
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: mcp-server
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poi-network
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: poi-network
+        app.kubernetes.io/component: mcp-server
+        app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: poi-mcp-server
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/component
+                      operator: In
+                      values:
+                        - mcp-server
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: mcp-server
+          image: ghcr.io/quantumworld-dpdns-io/decentralized-proof-of-contact-network/poi-mcp-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3002
+              protocol: TCP
+            - name: metrics
+              containerPort: 9091
+              protocol: TCP
+          env:
+            - name: MCP_PORT
+              value: "3002"
+            - name: POI_API_URL
+              value: "http://poi-api.poi-network.svc.cluster.local:80"
+            - name: VECTOR_DB_HOST
+              value: "chromadb.poi-network.svc.cluster.local:8000"
+            - name: VECTOR_DB_PORT
+              value: "8000"
+            - name: AI_ENDPOINT
+              value: "http://ollama.poi-network.svc.cluster.local:11434"
+            - name: AI_PROVIDER
+              value: "ollama"
+            - name: AI_MODEL
+              value: "llama3"
+            - name: EMBEDDING_MODEL
+              value: "nomic-embed-text"
+            - name: OTLP_ENDPOINT
+              value: "http://otel-collector.poi-network.svc.cluster.local:4317"
+            - name: RUST_LOG
+              value: "info"
+          envFrom:
+            - secretRef:
+                name: poi-secrets
+                optional: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsUser: 1000
+            runAsGroup: 1000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2

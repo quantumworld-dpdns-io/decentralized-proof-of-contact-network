@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: poi-network
+  labels:
+    name: poi-network
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network

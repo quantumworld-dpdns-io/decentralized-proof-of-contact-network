@@ -1,0 +1,265 @@
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-deny-all
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-allow-dns
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-allow-node-p2p
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: node
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: {{ .Values.node.ports.p2p }}
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+    - ports:
+        - port: {{ .Values.node.ports.api }}
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: api
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: dashboard
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: mcp-server
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+    - ports:
+        - port: {{ .Values.node.ports.metrics }}
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+  egress:
+    - ports:
+        - port: 8000
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: chromadb
+    - ports:
+        - port: 6333
+          protocol: TCP
+        - port: 6334
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: qdrant
+    - ports:
+        - port: 11434
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: ollama
+    - ports:
+        - port: 4317
+          protocol: TCP
+        - port: 4318
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: otel-collector
+    - ports:
+        - port: {{ .Values.node.ports.p2p }}
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-allow-api-ingress
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: {{ .Values.api.ports.http }}
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: mcp-server
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: dashboard
+    - ports:
+        - port: {{ .Values.api.ports.metrics }}
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+  egress:
+    - ports:
+        - port: {{ .Values.node.ports.api }}
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+    - ports:
+        - port: 8000
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: chromadb
+    - ports:
+        - port: 11434
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: ollama
+    - ports:
+        - port: 4317
+          protocol: TCP
+        - port: 4318
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: otel-collector
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-allow-dashboard-ingress
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: dashboard
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: {{ .Values.dashboard.port }}
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "poi-network.fullname" . }}-allow-mcp-server-ingress
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: mcp-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: {{ .Values.mcpServer.ports.http }}
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+  egress:
+    - ports:
+        - port: {{ .Values.api.service.port }}
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: api
+    - ports:
+        - port: 8000
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: chromadb
+    - ports:
+        - port: 11434
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app: ollama
+{{- end }}

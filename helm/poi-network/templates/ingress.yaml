@@ -1,0 +1,82 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "poi-network.fullname" . }}-ingress
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.hosts.api }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "poi-network.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+    - host: {{ .Values.ingress.hosts.dashboard }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "poi-network.fullname" . }}-dashboard
+                port:
+                  number: {{ .Values.dashboard.service.port }}
+    - host: {{ .Values.ingress.hosts.mcp }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "poi-network.fullname" . }}-mcp-server
+                port:
+                  number: {{ .Values.mcpServer.service.port }}
+  {{- if .Values.ingress.hosts.root }}
+    - host: {{ .Values.ingress.hosts.root }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "poi-network.fullname" . }}-dashboard
+                port:
+                  number: {{ .Values.dashboard.service.port }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.ingress.clusterIssuer.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.ingress.clusterIssuer.name }}
+  namespace: {{ include "poi-network.namespace" . }}
+spec:
+  acme:
+    server: {{ .Values.ingress.clusterIssuer.server }}
+    email: {{ .Values.ingress.clusterIssuer.email }}
+    privateKeySecretRef:
+      name: {{ .Values.ingress.clusterIssuer.name }}-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: {{ .Values.ingress.className }}
+{{- end }}

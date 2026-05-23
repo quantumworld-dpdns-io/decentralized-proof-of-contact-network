@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: poi-api
+  namespace: poi-network
+  labels:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: decentralized-proof-of-contact-network
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9091
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: poi-network
+    app.kubernetes.io/component: api
