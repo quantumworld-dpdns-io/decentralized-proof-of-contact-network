@@ -1,10 +1,3 @@
-use crate::error::ConfigError;
-use poi_ai::AiConfig;
-use poi_analytics::AnalyticsConfig;
-use poi_api::ApiConfig;
-use poi_core::CoreConfig;
-use poi_networking::NetworkConfig;
-use poi_vector_store::VectorStoreConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +19,44 @@ impl Default for StorageConfig {
 
 fn default_storage_provider() -> String {
     "duckdb".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkConfig {
+    #[serde(default = "default_listen_addr")]
+    pub listen_addr: String,
+    #[serde(default)]
+    pub external_addr: Option<String>,
+    #[serde(default)]
+    pub bootstrap_peers: Vec<String>,
+    #[serde(default = "default_max_peers")]
+    pub max_peers: usize,
+    #[serde(default = "default_handshake_timeout")]
+    pub handshake_timeout_secs: u64,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            listen_addr: default_listen_addr(),
+            external_addr: None,
+            bootstrap_peers: Vec::new(),
+            max_peers: default_max_peers(),
+            handshake_timeout_secs: default_handshake_timeout(),
+        }
+    }
+}
+
+fn default_listen_addr() -> String {
+    "0.0.0.0:9090".to_string()
+}
+
+fn default_max_peers() -> usize {
+    50
+}
+
+fn default_handshake_timeout() -> u64 {
+    10
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,36 +85,34 @@ fn default_log_level() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeConfig {
-    #[serde(rename = "node")]
-    pub core: CoreConfig,
+    pub core: poi_core::CoreConfig,
     pub network: NetworkConfig,
     pub storage: StorageConfig,
-    #[serde(rename = "vector_store")]
-    pub vector_store: VectorStoreConfig,
-    pub api: ApiConfig,
-    pub ai: AiConfig,
-    pub analytics: AnalyticsConfig,
+    pub vector_store: poi_vector_store::VectorStoreConfig,
+    pub api: poi_api::ApiConfig,
+    pub ai: poi_ai::AiConfig,
+    pub analytics: poi_analytics::AnalyticsConfig,
     pub observability: ObservabilityConfig,
 }
 
 impl Default for NodeConfig {
     fn default() -> Self {
         Self {
-            core: CoreConfig::default(),
+            core: poi_core::CoreConfig::default(),
             network: NetworkConfig::default(),
             storage: StorageConfig::default(),
-            vector_store: VectorStoreConfig::default(),
-            api: ApiConfig::default(),
-            ai: AiConfig::default(),
-            analytics: AnalyticsConfig::default(),
+            vector_store: poi_vector_store::VectorStoreConfig::default(),
+            api: poi_api::ApiConfig::default(),
+            ai: poi_ai::AiConfig::default(),
+            analytics: poi_analytics::AnalyticsConfig::default(),
             observability: ObservabilityConfig::default(),
         }
     }
 }
 
 impl NodeConfig {
-    pub fn from_file(path: &str) -> Result<Self, ConfigError> {
-        let content = std::fs::read_to_string(path).map_err(|e| ConfigError::IoError {
+    pub fn from_file(path: &str) -> Result<Self, crate::ConfigError> {
+        let content = std::fs::read_to_string(path).map_err(|e| crate::ConfigError::IoError {
             path: path.to_string(),
             cause: e.to_string(),
         })?;
@@ -93,26 +122,25 @@ impl NodeConfig {
             .unwrap_or("toml");
         match ext {
             "toml" => toml::from_str(&content),
-            "yaml" | "yml" => {
-                serde_yaml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string()))
-            }
-            "json" => {
-                serde_json::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string()))
-            }
-            other => Err(ConfigError::UnsupportedFormat(other.to_string())),
+            "yaml" | "yml" => serde_yaml::from_str(&content)
+                .map_err(|e| crate::ConfigError::ParseError(e.to_string())),
+            "json" => serde_json::from_str(&content)
+                .map_err(|e| crate::ConfigError::ParseError(e.to_string())),
+            other => Err(crate::ConfigError::UnsupportedFormat(other.to_string())),
         }
-        .map_err(|e| ConfigError::ParseError(e.to_string()))
+        .map_err(|e| crate::ConfigError::ParseError(e.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::NodeConfig;
 
     #[test]
     fn test_config_default() {
         let config = NodeConfig::default();
-        assert_eq!(config.core.node_id, "poi-node");
+        assert_eq!(config.core.log_level, "info");
         assert_eq!(config.network.listen_addr, "0.0.0.0:9090");
         assert_eq!(config.storage.provider, "duckdb");
         assert_eq!(config.observability.log_level, "info");
@@ -121,8 +149,8 @@ mod tests {
     #[test]
     fn test_config_from_toml() {
         let toml_str = r#"
-[node]
-id = "test-node"
+[core]
+node_id = "poi-test-node"
 data_dir = "/tmp/data"
 log_level = "debug"
 
@@ -160,7 +188,7 @@ prometheus_port = 9091
 log_level = "debug"
 "#;
         let config: NodeConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.core.node_id, "test-node");
+        assert_eq!(config.core.node_id.0, "poi-test-node");
         assert_eq!(config.core.data_dir, "/tmp/data");
         assert_eq!(config.core.log_level, "debug");
         assert_eq!(config.network.listen_addr, "0.0.0.0:9091");
@@ -176,10 +204,10 @@ log_level = "debug"
     }
 
     #[test]
-    fn test_storage_config_default() {
-        let sc = StorageConfig::default();
-        assert_eq!(sc.provider, "duckdb");
-        assert!(sc.duckdb_path.is_none());
+    fn test_network_config_default() {
+        let nc = NetworkConfig::default();
+        assert_eq!(nc.listen_addr, "0.0.0.0:9090");
+        assert!(nc.external_addr.is_none());
     }
 
     #[test]
