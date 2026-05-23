@@ -9,6 +9,7 @@ src/poi/models.py
 src/poi_client.egg-info/PKG-INFO
 src/poi_client.egg-info/SOURCES.txt
 src/poi_client.egg-info/dependency_links.txt
+src/poi_client.egg-info/entry_points.txt
 src/poi_client.egg-info/requires.txt
 src/poi_client.egg-info/top_level.txt
 tests/test_client.py

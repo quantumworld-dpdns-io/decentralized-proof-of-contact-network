@@ -18,6 +18,10 @@ reqwest = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+chrono = { workspace = true }
+uuid = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
 default = ["ollama"]

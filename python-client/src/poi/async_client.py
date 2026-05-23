@@ -49,6 +49,9 @@ class AsyncPoiClient:
             msg = body.get("error", body.get("message", response.text)) if isinstance(body, dict) else response.text
             raise ApiError(response.status_code, str(msg))
 
+        if response.status_code in (204, 205) or not response.content:
+            return {}
+
         return response.json()
 
     @staticmethod

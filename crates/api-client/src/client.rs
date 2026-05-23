@@ -1,4 +1,4 @@
-use poi_core::ContactProof;
+use poi_core::{ContactProof, OrbitalWindow};
 use reqwest::header;
 
 use crate::error::*;
