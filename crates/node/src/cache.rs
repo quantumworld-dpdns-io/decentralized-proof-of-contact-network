@@ -136,7 +136,7 @@ mod tests {
         let proof_id = poi_core::ProofId(uuid::Uuid::from_u64_pair(id_val, 0));
         let window = OrbitalWindow::new(
             Utc::now(),
-            Utc::now() + Duration::hours(1),
+            Utc::now() + ChronoDuration::hours(1),
             WindowType::Standard,
         );
         let metadata = ProofMetadata {
