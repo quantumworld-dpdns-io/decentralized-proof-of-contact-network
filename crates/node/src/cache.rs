@@ -38,15 +38,16 @@ impl ProofCache {
     pub fn get(&self, id: &uuid::Uuid) -> Option<ContactProof> {
         let mut inner = self.inner.lock().expect("cache lock poisoned");
 
-        let entry = inner.map.get(id)?;
-        if entry.inserted_at.elapsed() > self.ttl {
-            inner.map.remove(id);
-            inner.order.retain(|k| k != id);
-            inner.misses += 1;
-            return None;
-        }
-        let proof = entry.proof.clone();
-        drop(entry);
+        let proof = {
+            let entry = inner.map.get(id)?;
+            if entry.inserted_at.elapsed() > self.ttl {
+                inner.map.remove(id);
+                inner.order.retain(|k| k != id);
+                inner.misses += 1;
+                return None;
+            }
+            entry.proof.clone()
+        };
 
         inner.hits += 1;
         inner.order.retain(|k| k != id);
