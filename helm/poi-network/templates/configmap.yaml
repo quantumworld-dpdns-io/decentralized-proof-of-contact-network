@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "poi-network.fullname" . }}-config
+  namespace: {{ include "poi-network.namespace" . }}
+  labels:
+    {{- include "poi-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  config.toml: |
+    [node]
+    id = "${NODE_ID}"
+    data_dir = "/var/lib/poi"
+    log_level = "info"
+
+    [network]
+    listen_addr = "0.0.0.0:{{ .Values.node.ports.p2p }}"
+    external_addr = "${EXTERNAL_ADDR}"
+    bootstrap_peers = [
+      {{- range $i, $_ := until (int .Values.node.replicas) }}
+      "{{ include "poi-network.fullname" $ }}-node-{{ $i }}.{{ .Values.node.serviceName }}.{{ include "poi-network.namespace" $ }}.svc.cluster.local:{{ $.Values.node.ports.p2p }}"{{ if lt $i (sub (int $.Values.node.replicas) 1) }},{{ end }}
+      {{- end }}
+    ]
+
+    [storage]
+    provider = "duckdb"
+    duckdb_path = "/var/lib/poi/proofs.duckdb"
+
+    [vector_store]
+    provider = "${VECTOR_DB_PROVIDER}"
+    host = "${VECTOR_DB_HOST}"
+    port = ${VECTOR_DB_PORT}
+    collection = "poi-proofs"
+    api_key = "${VECTOR_DB_API_KEY}"
+
+    [api]
+    bind_addr = "0.0.0.0:{{ .Values.node.ports.api }}"
+    allowed_origins = ["${DASHBOARD_URL}"]
+    tls_cert = "/etc/poi/tls.crt"
+    tls_key = "/etc/poi/tls.key"
+
+    [ai]
+    provider = "${AI_PROVIDER}"
+    model = "${AI_MODEL}"
+    embedding_model = "${EMBEDDING_MODEL}"
+    endpoint = "${AI_ENDPOINT}"
+    api_key = "${AI_API_KEY}"
+
+    [analytics]
+    iceberg_warehouse = "s3://poi-analytics/iceberg"
+    duckdb_path = "/var/lib/poi/analytics.duckdb"
+
+    [observability]
+    otlp_endpoint = "${OTLP_ENDPOINT}"
+    prometheus_port = {{ .Values.node.ports.metrics }}
+
+  {{- if .Values.monitoring.prometheusEnabled }}
+  prometheus-config.yaml: |
+    scrape_configs:
+      - job_name: 'poi-nodes'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            action: keep
+            regex: node
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:{{ .Values.node.ports.metrics }}
+            target_label: __address__
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            action: keep
+            regex: 'poi_.*'
+  {{- end }}
