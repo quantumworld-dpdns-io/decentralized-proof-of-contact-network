@@ -2,7 +2,7 @@ use axum::{
     extract::Request,
     http::{header, Method, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Json, Response},
+    response::{Json, Response},
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
