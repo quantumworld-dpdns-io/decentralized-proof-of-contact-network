@@ -1,0 +1,54 @@
+# Global owners for the entire repository
+* @quantumworld-dpdns-io
+
+# Core workspace crates
+/crates/core/ @quantumworld-dpdns-io
+/crates/networking/ @quantumworld-dpdns-io
+/crates/node/ @quantumworld-dpdns-io
+
+# API and client crates
+/crates/api/ @quantumworld-dpdns-io
+/crates/api-client/ @quantumworld-dpdns-io
+
+# CLI tool
+/crates/cli/ @quantumworld-dpdns-io
+
+# Vector store and analytics
+/crates/vector-store/ @quantumworld-dpdns-io
+/crates/analytics/ @quantumworld-dpdns-io
+
+# AI integration
+/crates/ai/ @quantumworld-dpdns-io
+
+# MCP server
+/crates/mcp-server/ @quantumworld-dpdns-io
+
+# Dashboard
+/dashboard/ @quantumworld-dpdns-io
+
+# Python bindings
+/python-client/ @quantumworld-dpdns-io
+/pyproject.toml @quantumworld-dpdns-io
+
+# Docker infrastructure
+/docker/ @quantumworld-dpdns-io
+
+# CI/CD pipelines
+/.github/ @quantumworld-dpdns-io
+
+# Documentation
+/docs/ @quantumworld-dpdns-io
+/README.md @quantumworld-dpdns-io
+
+# Configuration
+/config.prod.toml @quantumworld-dpdns-io
+/config.dev.toml @quantumworld-dpdns-io
+/Cargo.toml @quantumworld-dpdns-io
+/rust-toolchain.toml @quantumworld-dpdns-io
+/Makefile @quantumworld-dpdns-io
+
+# Integration tests
+/tests/ @quantumworld-dpdns-io
+
+# Scripts
+/scripts/ @quantumworld-dpdns-io
