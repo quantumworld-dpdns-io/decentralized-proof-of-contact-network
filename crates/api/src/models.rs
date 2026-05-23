@@ -10,7 +10,6 @@ use utoipa::ToSchema;
 
 use crate::auth::AuthConfig;
 use crate::config::ApiConfig;
-use crate::error::ApiError;
 use crate::events::AppEvent;
 
 pub type AppState = Arc<AppStateInner>;
@@ -26,10 +25,7 @@ pub struct AppStateInner {
 }
 
 impl AppStateInner {
-    pub fn new(
-        api_config: ApiConfig,
-        auth_config: AuthConfig,
-    ) -> Self {
+    pub fn new(api_config: ApiConfig, auth_config: AuthConfig) -> Self {
         let (event_tx, _) = broadcast::channel(256);
         Self {
             api_config,
@@ -261,5 +257,3 @@ pub struct SummarizeResponse {
     pub summary: String,
     pub key_metrics: serde_json::Value,
 }
-
-pub type ApiError = ApiError;

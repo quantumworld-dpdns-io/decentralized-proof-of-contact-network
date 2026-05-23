@@ -48,12 +48,15 @@ impl OpenAiCompatibleProvider {
         }
         headers
     }
+}
 
-    pub async fn chat_impl(
-        &self,
-        messages: &[ChatMessage],
-        config: &ChatConfig,
-    ) -> Result<ChatResponse> {
+#[async_trait]
+impl AiProvider for OpenAiCompatibleProvider {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    async fn chat(&self, messages: &[ChatMessage], config: &ChatConfig) -> Result<ChatResponse> {
         #[derive(Serialize)]
         struct ChatRequest {
             model: String,
@@ -160,13 +163,11 @@ impl OpenAiCompatibleProvider {
         })
     }
 
-    pub async fn embed_impl(&self, text: &str) -> Result<Vec<f32>> {
-        self.embed_batch_impl(&[text])
-            .await
-            .map(|mut v| v.remove(0))
+    async fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        self.embed_batch(&[text]).await.map(|mut v| v.remove(0))
     }
 
-    pub async fn embed_batch_impl(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         #[derive(Serialize)]
         struct EmbedRequest<'a> {
             model: String,
@@ -206,7 +207,7 @@ impl OpenAiCompatibleProvider {
 
         if !response.status().is_success() {
             return Err(match response.status().as_u16() {
-                429 => AiRateLimited,
+                429 => AiError::RateLimited,
                 _ => AiError::EmbeddingError(format!("HTTP {}", response.status())),
             });
         }
@@ -257,15 +258,15 @@ macro_rules! make_openai_compat_provider {
                 messages: &[ChatMessage],
                 config: &ChatConfig,
             ) -> Result<ChatResponse> {
-                self.0.chat_impl(messages, config).await
+                self.0.chat(messages, config).await
             }
 
             async fn embed(&self, text: &str) -> Result<Vec<f32>> {
-                self.0.embed_impl(text).await
+                self.0.embed(text).await
             }
 
             async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
-                self.0.embed_batch_impl(texts).await
+                self.0.embed_batch(texts).await
             }
         }
     };
