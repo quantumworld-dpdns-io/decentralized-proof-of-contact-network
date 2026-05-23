@@ -21,9 +21,9 @@ pub trait ContactProofExt: Sized {
     fn pqc_sign(&mut self, keypair: &KeyPair) -> Result<()>;
     fn pqc_verify(&self, public_key: &PublicKey) -> Result<bool>;
     fn to_json(&self) -> String;
-    fn from_json(s: &str) -> Result<Self>;
+    fn from_json(s: &str) -> Result<Self> where Self: Sized;
     fn to_cbor(&self) -> Vec<u8>;
-    fn from_cbor(data: &[u8]) -> Result<Self>;
+    fn from_cbor(data: &[u8]) -> Result<Self> where Self: Sized;
     fn is_valid(&self) -> Result<bool>;
     fn canonical_bytes(&self) -> Vec<u8>;
 }
