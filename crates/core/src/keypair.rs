@@ -1,12 +1,12 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use ed25519_dalek::{Signature as DalekSignature, SigningKey, VerifyingKey};
+use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
+use rand::RngCore;
 
 use crate::error::{Error, Result};
 use crate::types::{KeyPair, PqcSignature, PublicKey, SecretKey, Signature};
 
-/// Extension trait providing keypair operations.
 pub trait KeyPairExt {
     fn generate() -> KeyPair;
     fn from_secret(secret: &[u8]) -> Result<KeyPair>;
@@ -22,8 +22,9 @@ pub trait KeyPairExt {
 
 impl KeyPairExt for KeyPair {
     fn generate() -> Self {
-        let mut csprng = OsRng;
-        let signing_key = SigningKey::generate(&mut csprng);
+        let mut seed = [0u8; 32];
+        OsRng.fill_bytes(&mut seed);
+        let signing_key = SigningKey::from_bytes(&seed);
         let verifying_key = signing_key.verifying_key();
         KeyPair {
             public: PublicKey(BASE64.encode(verifying_key.to_bytes())),
@@ -68,10 +69,7 @@ impl KeyPairExt for KeyPair {
             },
             Err(_) => return false,
         };
-        let dalek_sig = match DalekSignature::from_bytes(&sig_bytes) {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let dalek_sig = DalekSignature::from_bytes(&sig_bytes);
         verifying_key.verify(data, &dalek_sig).is_ok()
     }
 
@@ -169,6 +167,8 @@ impl KeyPairExt for KeyPair {
             .map_err(|_| Error::InvalidKey("secret key must be 32 bytes".into()))
     }
 }
+
+use ed25519_dalek::Signature as DalekSignature;
 
 #[cfg(test)]
 mod tests {
