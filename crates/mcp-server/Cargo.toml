@@ -14,3 +14,9 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 async-trait = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
+reqwest = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
