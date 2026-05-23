@@ -5,13 +5,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use rand::seq::SliceRandom;
-use rand::Rng;
+use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 
 use crate::error::NetworkError;
 use crate::message::PeerEntry;
-use crate::peer_store::{PeerRecord, PeerReputation, PeerStore};
+use crate::peer_store::PeerStore;
 
 #[derive(Debug, Clone)]
 pub struct PeerInfo {
