@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Stage 1: Build Rust binaries
-FROM rust:1.80-slim-bookworm AS builder
+FROM rust:1.95-slim-bookworm AS builder
 
 ARG TARGETARCH
 
