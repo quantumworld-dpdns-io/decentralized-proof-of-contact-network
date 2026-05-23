@@ -104,7 +104,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn verify_proof(&self, proof_id: &str) -> Result<Value> {
+    pub async fn verify_proof(&self, proof_id: &str) -> Result<Value> {
         let url = format!("{}/api/v1/proofs/{}/verify", self.api_url, proof_id);
         let resp = self.http_client.post(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -118,7 +118,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn search_proofs(&self, query: &Value) -> Result<Value> {
+    pub async fn search_proofs(&self, query: &Value) -> Result<Value> {
         let url = format!("{}/api/v1/proofs/search", self.api_url);
         let resp = self
             .http_client
@@ -138,7 +138,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn get_proof(&self, proof_id: &str) -> Result<Value> {
+    pub async fn get_proof(&self, proof_id: &str) -> Result<Value> {
         let url = format!("{}/api/v1/proofs/{}", self.api_url, proof_id);
         let resp = self.http_client.get(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -152,7 +152,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn list_recent_proofs(&self) -> Result<Value> {
+    pub async fn list_recent_proofs(&self) -> Result<Value> {
         let url = format!("{}/api/v1/proofs", self.api_url);
         let resp = self.http_client.get(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -166,7 +166,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn get_network_status(&self) -> Result<Value> {
+    pub async fn get_network_status(&self) -> Result<Value> {
         let url = format!("{}/api/v1/status", self.api_url);
         let resp = self.http_client.get(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -180,7 +180,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn list_peers(&self) -> Result<Value> {
+    pub async fn list_peers(&self) -> Result<Value> {
         let url = format!("{}/api/v1/peers", self.api_url);
         let resp = self.http_client.get(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -194,7 +194,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn get_analytics(&self) -> Result<Value> {
+    pub async fn get_analytics(&self) -> Result<Value> {
         let url = format!("{}/api/v1/analytics", self.api_url);
         let resp = self.http_client.get(&url).headers(self.headers()).send().await?;
         if !resp.status().is_success() {
@@ -208,7 +208,7 @@ impl ApiClient {
         resp.json().await.map_err(McpError::from)
     }
 
-    pub(crate) async fn ai_query(&self, query: &Value) -> Result<Value> {
+    pub async fn ai_query(&self, query: &Value) -> Result<Value> {
         let url = format!("{}/ai/query", self.api_url);
         let resp = self
             .http_client
