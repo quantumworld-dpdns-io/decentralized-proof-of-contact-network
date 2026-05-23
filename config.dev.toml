@@ -1,0 +1,38 @@
+# Development configuration for poi-node
+[node]
+id = "dev-node-001"
+data_dir = "./data"
+log_level = "debug"
+
+[network]
+listen_addr = "0.0.0.0:9090"
+external_addr = "127.0.0.1:9090"
+bootstrap_peers = []
+
+[storage]
+provider = "duckdb"
+duckdb_path = "./data/proofs.duckdb"
+
+[vector_store]
+provider = "chroma"
+host = "localhost"
+port = 8000
+collection = "poi-proofs"
+
+[api]
+bind_addr = "0.0.0.0:3000"
+allowed_origins = ["http://localhost:3001"]
+
+[ai]
+provider = "ollama"
+model = "gemma3:latest"
+embedding_model = "nomic-embed-text:latest"
+endpoint = "http://localhost:11434"
+
+[analytics]
+iceberg_warehouse = "./data/iceberg"
+duckdb_path = "./data/analytics.duckdb"
+
+[observability]
+otlp_endpoint = "http://localhost:4317"
+prometheus_port = 9091
