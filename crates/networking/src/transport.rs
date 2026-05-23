@@ -112,6 +112,7 @@ impl Connection for TcpConnection {
 
 pub struct TcpTransport {
     listen_addr: SocketAddr,
+    actual_addr: Arc<Mutex<Option<SocketAddr>>>,
     sender: Arc<Mutex<Option<broadcast::Sender<TransportMessage>>>>,
 }
 
@@ -119,8 +120,14 @@ impl TcpTransport {
     pub fn new(listen_addr: SocketAddr) -> Self {
         Self {
             listen_addr,
+            actual_addr: Arc::new(Mutex::new(None)),
             sender: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub fn set_actual_addr(&self, addr: SocketAddr) {
+        let mut actual = self.actual_addr.blocking_lock();
+        *actual = Some(addr);
     }
 }
 
@@ -128,7 +135,9 @@ impl TcpTransport {
 impl Transport for TcpTransport {
     async fn listen(&self) -> Result<broadcast::Receiver<TransportMessage>, NetworkError> {
         let listener = TcpListener::bind(self.listen_addr).await?;
-        info!("TCP transport listening on {}", self.listen_addr);
+        let actual = listener.local_addr()?;
+        *self.actual_addr.lock().await = Some(actual);
+        info!("TCP transport listening on {}", actual);
         let (tx, rx) = broadcast::channel(1024);
         *self.sender.lock().await = Some(tx.clone());
         let local_addr = listener.local_addr()?;
