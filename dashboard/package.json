@@ -21,6 +21,6 @@
     "recharts": "^2",
     "lucide-react": "^0.300",
     "clsx": "^2",
-    "date-fns": "^3"
+    "date-fns": "^4"
   }
 }
