@@ -37,7 +37,7 @@ base64 = "0.22"
 prost = "0.13"
 tonic = "0.12"
 axum = { version = "0.7", features = ["ws"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "limit"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit"] }
 utoipa = { version = "4", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "7", features = ["axum"] }
 async-trait = "0.1"
