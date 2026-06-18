@@ -34,7 +34,7 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all --check
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install Python lint dependencies
@@ -107,7 +107,7 @@ jobs:
       - name: Run doc tests
         run: cargo test --workspace --doc
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install Python test dependencies
@@ -138,7 +138,7 @@ jobs:
       - name: Generate Rust coverage
         run: cargo tarpaulin --workspace --out Xml --out Html --output-dir coverage
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install Python coverage tool
