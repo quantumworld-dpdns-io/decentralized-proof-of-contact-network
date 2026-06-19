@@ -3573,20 +3573,6 @@ dependencies = [
 
 [[package]]
 name = "opentelemetry"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c365a63eec4f55b7efeceb724f1336f26a9cf3427b70e59e2cd2a5b947fba96"
-dependencies = [
- "futures-core",
- "futures-sink",
- "js-sys",
- "once_cell",
- "pin-project-lite",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "opentelemetry"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "570074cc999d1a58184080966e5bd3bf3a9a4af650c3b05047c2621e7405cd17"
@@ -3600,32 +3586,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "opentelemetry-prometheus"
-version = "0.17.0"
+name = "opentelemetry"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc4191ce34aa274621861a7a9d68dbcf618d5b6c66b10081631b61fd81fbc015"
+checksum = "b0142c63252a9e054e68a4c61a5778f7b14f576274d593f8ce883d191a099682"
 dependencies = [
- "once_cell",
- "opentelemetry 0.24.0",
- "opentelemetry_sdk 0.24.1",
- "prometheus",
- "protobuf",
+ "js-sys",
+ "tracing",
 ]
 
 [[package]]
-name = "opentelemetry_sdk"
-version = "0.24.1"
+name = "opentelemetry-prometheus"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "692eac490ec80f24a17828d49b40b60f5aeaccdfe6a503f939713afd22bc28df"
+checksum = "2c0359983e7f79cf33c9abd89e5d7ddf67c46c419d0148598022d70e70c01aba"
 dependencies = [
- "async-trait",
- "futures-channel",
- "futures-executor",
- "futures-util",
- "glob",
  "once_cell",
- "opentelemetry 0.24.0",
- "thiserror 1.0.69",
+ "opentelemetry 0.32.0",
+ "opentelemetry_sdk 0.32.0",
+ "prometheus 0.14.0",
+ "tracing",
 ]
 
 [[package]]
@@ -3645,6 +3625,20 @@ dependencies = [
  "rand 0.8.6",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opentelemetry_sdk"
+version = "0.32.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "368afaed344110f40b179bb8fbe54bc52d98f9bd2b281799ef32487c2650c956"
+dependencies = [
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "opentelemetry 0.32.0",
+ "portable-atomic",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -3916,7 +3910,7 @@ dependencies = [
  "poi-analytics",
  "poi-core",
  "poi-vector-store",
- "prometheus",
+ "prometheus 0.13.4",
  "rand 0.8.6",
  "reqwest",
  "serde",
@@ -3983,7 +3977,7 @@ dependencies = [
  "criterion",
  "ed25519-dalek",
  "hex",
- "prometheus",
+ "prometheus 0.13.4",
  "proptest",
  "prost",
  "rand 0.8.6",
@@ -4068,7 +4062,7 @@ dependencies = [
  "poi-api",
  "poi-core",
  "poi-vector-store",
- "prometheus",
+ "prometheus 0.13.4",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -4195,6 +4189,20 @@ dependencies = [
  "parking_lot",
  "protobuf",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "prometheus"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ca5326d8d0b950a9acd87e6a3f94745394f62e4dae1b1ee22b2bc0c394af43a"
+dependencies = [
+ "cfg-if",
+ "fnv",
+ "lazy_static",
+ "memchr",
+ "parking_lot",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

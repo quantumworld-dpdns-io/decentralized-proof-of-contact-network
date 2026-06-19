@@ -23,7 +23,7 @@ thiserror = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 opentelemetry = "0.26"
-opentelemetry-prometheus = "0.17"
+opentelemetry-prometheus = "0.32"
 prometheus = "0.13"
 opentelemetry_sdk = "0.26"
 reqwest = { version = "0.12", features = ["json"] }
