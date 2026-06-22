@@ -19,7 +19,7 @@
     "autoprefixer": "^10",
     "postcss": "^8",
     "recharts": "^2",
-    "lucide-react": "^0.300",
+    "lucide-react": "^1.21",
     "clsx": "^2",
     "date-fns": "^3"
   }
