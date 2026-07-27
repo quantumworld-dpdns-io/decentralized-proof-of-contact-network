@@ -18,7 +18,7 @@
     "tailwindcss": "^3",
     "autoprefixer": "^10",
     "postcss": "^8",
-    "recharts": "^2",
+    "recharts": "^3",
     "lucide-react": "^0.300",
     "clsx": "^2",
     "date-fns": "^3"
