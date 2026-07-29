@@ -75,7 +75,7 @@ jobs:
           echo "Smoke tests passed"
         continue-on-error: true
       - name: Notify deployment
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v3.0.3
         with:
           payload: |
             {
@@ -162,7 +162,7 @@ jobs:
           exit 1
         timeout-minutes: 5
       - name: Notify success
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v3.0.3
         with:
           payload: |
             {
@@ -185,7 +185,7 @@ jobs:
           echo "⚠️ Rolling back production deployment..."
           echo "Previous stable version would be redeployed here"
       - name: Notify rollback
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v3.0.3
         with:
           payload: |
             {
