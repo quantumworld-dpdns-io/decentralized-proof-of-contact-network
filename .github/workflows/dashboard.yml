@@ -76,7 +76,7 @@ jobs:
           name: dashboard-build
           path: dashboard/out
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dashboard/out
       - name: Deploy to GitHub Pages
