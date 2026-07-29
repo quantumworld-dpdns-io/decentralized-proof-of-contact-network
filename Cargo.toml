@@ -34,7 +34,7 @@ ed25519-dalek = { version = "=2.1.1", features = ["serde", "rand_core"] }
 rand = "0.8"
 hex = "0.4"
 base64 = "0.22"
-prost = "0.13"
+prost = "0.14"
 tonic = "0.12"
 axum = { version = "0.7", features = ["ws"] }
 tower-http = { version = "0.5", features = ["cors", "trace", "limit"] }
